@@ -14,8 +14,6 @@ dotnet run --project .\src\FelixTool.SupperBox
 内置示例：
 
 ```text
-echo "hello world"
-add 1.5 2
 websearch google "SupperBox launcher"
 sysconfig
 ```

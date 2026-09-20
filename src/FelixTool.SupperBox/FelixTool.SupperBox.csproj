@@ -2,8 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FelixTool.SupperBox.Abstractions\FelixTool.SupperBox.Abstractions.csproj" />
-    <ProjectReference Include="..\..\plugins\FelixTool.SupperBox.SamplePlugin\FelixTool.SupperBox.SamplePlugin.csproj"
-                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -14,13 +12,4 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
-
-  <Target Name="CopySamplePlugin" AfterTargets="Build">
-    <ItemGroup>
-      <SamplePluginFiles Include="$(MSBuildProjectDirectory)\..\..\plugins\FelixTool.SupperBox.SamplePlugin\bin\$(Configuration)\net10.0\FelixTool.SupperBox.SamplePlugin.dll" />
-    </ItemGroup>
-    <MakeDir Directories="$(TargetDir)Plugins" />
-    <Copy SourceFiles="@(SamplePluginFiles)" DestinationFolder="$(TargetDir)Plugins" SkipUnchangedFiles="true" />
-  </Target>
-
 </Project>

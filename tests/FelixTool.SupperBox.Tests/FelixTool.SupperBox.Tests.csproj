@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FelixTool.SupperBox\FelixTool.SupperBox.csproj" />
-    <ProjectReference Include="..\..\plugins\FelixTool.SupperBox.SamplePlugin\FelixTool.SupperBox.SamplePlugin.csproj" />
   </ItemGroup>
 
   <ItemGroup>

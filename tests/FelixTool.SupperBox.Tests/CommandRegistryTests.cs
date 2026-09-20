@@ -1,5 +1,4 @@
 using FelixTool.SupperBox.Abstractions;
-using FelixTool.SupperBox.SamplePlugin;
 
 namespace FelixTool.SupperBox.Tests;
 
@@ -8,9 +7,9 @@ public sealed class CommandRegistryTests
     [Fact]
     public async Task ExecuteAsync_ConvertsTypedArguments()
     {
-        var registry = new CommandRegistry([new AddCommand()]);
+        var registry = new CommandRegistry([new TypedCommand()]);
 
-        var result = await registry.ExecuteAsync("add 1.5 2", CancellationToken.None);
+        var result = await registry.ExecuteAsync("typed 1.5 2", CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal("1.5 + 2 = 3.5", result.Message);
@@ -19,10 +18,10 @@ public sealed class CommandRegistryTests
     [Fact]
     public async Task ExecuteAsync_ExplainsInvalidArgument()
     {
-        var registry = new CommandRegistry([new AddCommand()]);
+        var registry = new CommandRegistry([new TypedCommand()]);
 
         var exception = await Assert.ThrowsAsync<CommandInputException>(
-            () => registry.ExecuteAsync("add nope 2", CancellationToken.None));
+            () => registry.ExecuteAsync("typed nope 2", CancellationToken.None));
 
         Assert.Contains("left", exception.Message);
         Assert.Contains("数字", exception.Message);
@@ -63,6 +62,26 @@ public sealed class CommandRegistryTests
             CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("sample failure");
+        }
+    }
+
+    private sealed class TypedCommand : ICommandPlugin
+    {
+        public string Name => "typed";
+        public string Description => "Typed arguments";
+        public IReadOnlyList<CommandParameter> Parameters { get; } =
+        [
+            new("left", CommandParameterType.Number, "Left"),
+            new("right", CommandParameterType.Number, "Right")
+        ];
+
+        public Task<CommandResult> ExecuteAsync(
+            IReadOnlyDictionary<string, object?> arguments,
+            CancellationToken cancellationToken)
+        {
+            var left = (double)arguments["left"]!;
+            var right = (double)arguments["right"]!;
+            return Task.FromResult(CommandResult.Ok($"{left} + {right} = {left + right}"));
         }
     }
 
