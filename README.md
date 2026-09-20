@@ -15,6 +15,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 
 ```text
 websearch google "SupperBox launcher"
+openwsrepo MyRepository
 sysconfig
 ```
 
@@ -26,6 +27,10 @@ sysconfig
 `websearch <engine> <kw1> <kw2> ...` 的关键词，并会在打开浏览器前进行 URL 编码。
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
+
+`openwsrepo <repoName>` 使用 VS Code 打开
+`C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。输入 `openwsrepo ` 后会显示仓库名称
+并支持 Tab 补全；名称不存在时不会执行任何操作。
 
 配置文件的根属性名会自动对应同名命令插件（不区分大小写）。实现
 `IConfigurableCommandPlugin` 的插件会在启动和配置热重载时收到其专属 JSON 节点，

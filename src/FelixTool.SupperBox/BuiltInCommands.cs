@@ -19,6 +19,81 @@ public sealed class ExternalLauncher : IExternalLauncher
     }
 }
 
+public interface IRepositoryLauncher
+{
+    void Open(string repositoryPath);
+}
+
+public sealed class VisualStudioCodeLauncher : IRepositoryLauncher
+{
+    public void Open(string repositoryPath)
+    {
+        var startInfo = new ProcessStartInfo("code")
+        {
+            UseShellExecute = true
+        };
+        startInfo.ArgumentList.Add(repositoryPath);
+        Process.Start(startInfo);
+    }
+}
+
+public sealed class OpenWorkspaceRepositoryCommand(
+    string repositoryRoot,
+    IRepositoryLauncher launcher) : ICommandPlugin, ICommandValueSuggestionProvider
+{
+    public string Name => "openwsrepo";
+
+    public string Description => "使用 VS Code 打开 WiseTechGlobal 仓库";
+
+    public IReadOnlyList<CommandParameter> Parameters { get; } =
+    [
+        new("repoName", CommandParameterType.String, "公司代码仓库根目录下的仓库名称")
+    ];
+
+    public Task<CommandResult> ExecuteAsync(
+        IReadOnlyDictionary<string, object?> arguments,
+        CancellationToken cancellationToken)
+    {
+        var repository = FindRepository((string)arguments["repoName"]!);
+        if (repository is not null)
+        {
+            launcher.Open(repository);
+        }
+
+        return Task.FromResult(CommandResult.Ok(string.Empty));
+    }
+
+    public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
+    {
+        if (parameterIndex != 0)
+        {
+            return [];
+        }
+
+        return GetRepositories()
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(name => name)
+            .Select(name => new CommandValueSuggestion(name, "使用 VS Code 打开该仓库"))
+            .ToList();
+    }
+
+    private string? FindRepository(string repositoryName)
+    {
+        return GetRepositories().FirstOrDefault(path =>
+            Path.GetFileName(path).Equals(repositoryName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IEnumerable<string> GetRepositories()
+    {
+        return Directory.Exists(repositoryRoot)
+            ? Directory.EnumerateDirectories(repositoryRoot)
+            : [];
+    }
+}
+
 public sealed partial class WebSearchCommand(IExternalLauncher launcher) :
     IVariadicCommandPlugin,
     ICommandValueSuggestionProvider,

@@ -24,7 +24,10 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         var commands = loadResult.Plugins.Concat<ICommandPlugin>(
         [
             new WebSearchCommand(launcher),
-            new SystemConfigCommand(_configuration, launcher)
+            new SystemConfigCommand(_configuration, launcher),
+            new OpenWorkspaceRepositoryCommand(
+                @"C:\git\GitHub\WiseTechGlobal",
+                new VisualStudioCodeLauncher())
         ]).ToList();
         _configuration.Bind(commands);
         _registry = new CommandRegistry(commands);
