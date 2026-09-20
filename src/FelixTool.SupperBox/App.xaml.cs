@@ -9,6 +9,7 @@ namespace FelixTool.SupperBox;
 public partial class App : System.Windows.Application
 {
     private NotifyIcon? _trayIcon;
+    private System.Drawing.Icon? _trayIconImage;
     private MainWindow? _launcher;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -25,9 +26,10 @@ public partial class App : System.Windows.Application
             menu.Items.Add("打开 (&O)", null, (_, _) => _launcher.ShowLauncher());
             menu.Items.Add("退出 (&X)", null, (_, _) => Shutdown());
 
+            _trayIconImage = TrayIconFactory.Create();
             _trayIcon = new NotifyIcon
             {
-                Icon = System.Drawing.SystemIcons.Application,
+                Icon = _trayIconImage,
                 Text = "SupperBox - Ctrl+F1",
                 Visible = true,
                 ContextMenuStrip = menu
@@ -54,6 +56,7 @@ public partial class App : System.Windows.Application
             _trayIcon.Dispose();
         }
 
+        _trayIconImage?.Dispose();
         base.OnExit(e);
     }
 }

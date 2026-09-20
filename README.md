@@ -3,6 +3,15 @@
 一个常驻 Windows 托盘的命令启动器。按 `Ctrl+F1` 打开输入框，输入
 `command arg1 arg2 ...` 后按 Enter 执行插件命令。
 
+## AI 开发约定
+
+> **给 AI：每次修改完本项目后都必须运行根目录的 `.\build.ps1`。只有该脚本成功完成，
+> 才能认为修改已完成。不要只运行 `dotnet build` 代替此步骤。**
+
+该脚本会停止正在运行的 SupperBox，以 Release 配置将程序发布到
+`C:\Tools\FelixTool.SupperBox`，写入当前用户的 Windows `Run` 注册表项以启用登录后
+自启动，最后重新启动发布后的程序。该方式不需要管理员权限。
+
 ## 运行
 
 ```powershell
