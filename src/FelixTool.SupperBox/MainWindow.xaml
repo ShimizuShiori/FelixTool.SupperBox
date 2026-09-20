@@ -1,0 +1,69 @@
+<Window x:Class="FelixTool.SupperBox.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SupperBox"
+        Width="900"
+        SizeToContent="Height"
+        MaxHeight="640"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent"
+        AllowsTransparency="True"
+        Deactivated="Window_Deactivated"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Border Margin="20"
+            Padding="24"
+            Background="#FA1F2229"
+            BorderBrush="#596275"
+            BorderThickness="1"
+            CornerRadius="14">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.65" />
+        </Border.Effect>
+        <StackPanel>
+            <TextBox x:Name="CommandInput"
+                     FontFamily="Cascadia Mono, Consolas"
+                     FontSize="26"
+                     Padding="14,10"
+                     Foreground="#F8F8F2"
+                     Background="#FF2B303B"
+                     BorderBrush="#697386"
+                     CaretBrush="White"
+                     TextChanged="CommandInput_TextChanged"
+                     KeyDown="CommandInput_KeyDown"
+                     AutomationProperties.Name="命令输入框" />
+
+            <TextBlock x:Name="StatusText"
+                       Margin="4,12,4,0"
+                       Foreground="#AEB7C6"
+                       FontSize="14"
+                       Text="输入命令，按 Enter 执行，按 Esc 关闭。" />
+
+            <ListBox x:Name="SuggestionList"
+                     Margin="0,12,0,0"
+                     MaxHeight="360"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Foreground="#F8F8F2"
+                     SelectionChanged="SuggestionList_SelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12,8" Margin="0,2" Background="#FF303642" CornerRadius="7">
+                            <StackPanel>
+                                <TextBlock FontFamily="Cascadia Mono, Consolas"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding Signature}" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="#B8C1D1"
+                                           Text="{Binding Description}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </Border>
+</Window>
