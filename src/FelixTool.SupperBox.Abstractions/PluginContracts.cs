@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace FelixTool.SupperBox.Abstractions;
 
 public enum CommandParameterType
@@ -33,4 +35,21 @@ public interface ICommandPlugin
     Task<CommandResult> ExecuteAsync(
         IReadOnlyDictionary<string, object?> arguments,
         CancellationToken cancellationToken);
+}
+
+public interface IVariadicCommandPlugin : ICommandPlugin
+{
+    CommandParameter RemainingParameter { get; }
+}
+
+public sealed record CommandValueSuggestion(string Value, string Description);
+
+public interface ICommandValueSuggestionProvider
+{
+    IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query);
+}
+
+public interface IConfigurableCommandPlugin : ICommandPlugin
+{
+    void ApplyConfiguration(JsonElement configuration);
 }

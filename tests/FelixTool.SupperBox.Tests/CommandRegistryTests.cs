@@ -39,6 +39,17 @@ public sealed class CommandRegistryTests
         Assert.Equal("sample failure", exception.Message);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_PassesRemainingArgumentsToVariadicCommand()
+    {
+        var command = new VariadicCommand();
+        var registry = new CommandRegistry([command]);
+
+        await registry.ExecuteAsync("many first second third", CancellationToken.None);
+
+        Assert.Equal(["second", "third"], command.Remaining);
+    }
+
     private sealed class ThrowingCommand : ICommandPlugin
     {
         public string Name => "fail";
@@ -52,6 +63,27 @@ public sealed class CommandRegistryTests
             CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("sample failure");
+        }
+    }
+
+    private sealed class VariadicCommand : IVariadicCommandPlugin
+    {
+        public string Name => "many";
+        public string Description => "Variadic";
+        public IReadOnlyList<CommandParameter> Parameters { get; } =
+            [new("first", CommandParameterType.String, "First")];
+        public CommandParameter RemainingParameter { get; } =
+            new("remaining", CommandParameterType.String, "Remaining");
+        public IReadOnlyList<string> Remaining { get; private set; } = [];
+
+        public Task<CommandResult> ExecuteAsync(
+            IReadOnlyDictionary<string, object?> arguments,
+            CancellationToken cancellationToken)
+        {
+            Remaining = ((IReadOnlyList<object>)arguments["remaining"]!)
+                .Cast<string>()
+                .ToList();
+            return Task.FromResult(CommandResult.Ok("done"));
         }
     }
 }

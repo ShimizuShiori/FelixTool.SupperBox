@@ -7,6 +7,7 @@ namespace FelixTool.SupperBox;
 public partial class MainWindow : System.Windows.Window, IDisposable
 {
     private readonly CommandRegistry _registry;
+    private readonly SystemConfiguration _configuration;
     private readonly IReadOnlyList<string> _loadErrors;
     private GlobalHotKey? _hotKey;
     private bool _allowClose;
@@ -15,9 +16,18 @@ public partial class MainWindow : System.Windows.Window, IDisposable
     public MainWindow()
     {
         InitializeComponent();
+        _configuration = new SystemConfiguration();
+        _configuration.Reloaded += Configuration_Reloaded;
         var pluginDirectory = Path.Combine(AppContext.BaseDirectory, "Plugins");
         var loadResult = PluginLoader.Load(pluginDirectory);
-        _registry = new CommandRegistry(loadResult.Plugins);
+        var launcher = new ExternalLauncher();
+        var commands = loadResult.Plugins.Concat<ICommandPlugin>(
+        [
+            new WebSearchCommand(launcher),
+            new SystemConfigCommand(_configuration, launcher)
+        ]).ToList();
+        _configuration.Bind(commands);
+        _registry = new CommandRegistry(commands);
         _loadErrors = loadResult.Errors;
         UpdateSuggestions();
     }
@@ -62,6 +72,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
     {
         _allowClose = true;
         _hotKey?.Dispose();
+        _configuration.Dispose();
         Close();
     }
 
@@ -128,6 +139,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             CommandInput.IsEnabled = true;
             CommandInput.Focus();
             _executing = false;
+            Hide();
         }
     }
 
@@ -138,15 +150,52 @@ public partial class MainWindow : System.Windows.Window, IDisposable
 
     private void UpdateSuggestions()
     {
-        var commandQuery = CommandInput?.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-        var suggestions = _registry.Find(commandQuery)
-            .Select(command => new CommandSuggestion(
-                command.Name,
-                BuildSignature(command),
-                command.Description))
-            .ToList();
+        var input = CommandInput?.Text ?? string.Empty;
+        var suggestions = BuildSuggestions(input);
         SuggestionList.ItemsSource = suggestions;
         SuggestionList.SelectedIndex = suggestions.Count > 0 ? 0 : -1;
+    }
+
+    private IReadOnlyList<CommandSuggestion> BuildSuggestions(string input)
+    {
+        IReadOnlyList<string> tokens;
+        try
+        {
+            tokens = CommandParser.Tokenize(input);
+        }
+        catch (CommandInputException)
+        {
+            return [];
+        }
+
+        var endsWithWhitespace = input.Length > 0 && char.IsWhiteSpace(input[^1]);
+        if (tokens.Count == 0 || (tokens.Count == 1 && !endsWithWhitespace))
+        {
+            var query = tokens.FirstOrDefault() ?? string.Empty;
+            return _registry.Find(query)
+                .Select(command => new CommandSuggestion(
+                    command.Name,
+                    BuildSignature(command),
+                    command.Description,
+                    true))
+                .ToList();
+        }
+
+        if (!_registry.TryGet(tokens[0], out var command)
+            || command is not ICommandValueSuggestionProvider provider)
+        {
+            return [];
+        }
+
+        var parameterIndex = endsWithWhitespace ? tokens.Count - 1 : tokens.Count - 2;
+        var queryValue = endsWithWhitespace ? string.Empty : tokens[^1];
+        return provider.GetSuggestions(parameterIndex, queryValue)
+            .Select(suggestion => new CommandSuggestion(
+                suggestion.Value,
+                suggestion.Value,
+                suggestion.Description,
+                false))
+            .ToList();
     }
 
     private static string BuildSignature(ICommandPlugin command)
@@ -156,6 +205,11 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             var text = $"{parameter.Name}:{CommandRegistry.GetTypeName(parameter.Type)}";
             return parameter.Required ? $"<{text}>" : $"[{text}]";
         });
+        if (command is IVariadicCommandPlugin variadic)
+        {
+            parameters = parameters.Append($"[{variadic.RemainingParameter.Name}:文本...]");
+        }
+
         return $"{command.Name} {string.Join(' ', parameters)}".TrimEnd();
     }
 
@@ -163,8 +217,14 @@ public partial class MainWindow : System.Windows.Window, IDisposable
     {
         if (SuggestionList.SelectedItem is CommandSuggestion suggestion)
         {
-            var command = _registry.Commands.First(item =>
-                item.Name.Equals(suggestion.Name, StringComparison.OrdinalIgnoreCase));
+            if (!suggestion.IsCommand
+                || !_registry.TryGet(suggestion.Completion, out var command)
+                || command is null)
+            {
+                ShowStatus(suggestion.Description);
+                return;
+            }
+
             var details = command.Parameters.Count == 0
                 ? command.Description
                 : string.Join("；", command.Parameters.Select(parameter =>
@@ -175,9 +235,27 @@ public partial class MainWindow : System.Windows.Window, IDisposable
 
     private void CompleteSuggestion(CommandSuggestion suggestion)
     {
-        CommandInput.Text = $"{suggestion.Name} ";
+        if (suggestion.IsCommand)
+        {
+            CommandInput.Text = $"{suggestion.Completion} ";
+        }
+        else
+        {
+            var lastWhitespace = CommandInput.Text.LastIndexOfAny([' ', '\t', '\r', '\n']);
+            CommandInput.Text = $"{CommandInput.Text[..(lastWhitespace + 1)]}{suggestion.Completion} ";
+        }
+
         CommandInput.CaretIndex = CommandInput.Text.Length;
         CommandInput.Focus();
+    }
+
+    private void Configuration_Reloaded(object? sender, ConfigurationReloadedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            UpdateSuggestions();
+            ShowStatus(e.Message, !e.Success);
+        });
     }
 
     private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -205,5 +283,9 @@ public partial class MainWindow : System.Windows.Window, IDisposable
                 : System.Windows.Media.Color.FromRgb(174, 183, 198));
     }
 
-    private sealed record CommandSuggestion(string Name, string Signature, string Description);
+    private sealed record CommandSuggestion(
+        string Completion,
+        string Signature,
+        string Description,
+        bool IsCommand);
 }

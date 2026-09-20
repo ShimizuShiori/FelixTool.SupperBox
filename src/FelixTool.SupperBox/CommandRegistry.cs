@@ -11,6 +11,9 @@ public sealed class CommandRegistry(IEnumerable<ICommandPlugin> plugins)
 
     public IReadOnlyCollection<ICommandPlugin> Commands => _commands.Values;
 
+    public bool TryGet(string name, out ICommandPlugin? command) =>
+        _commands.TryGetValue(name, out command);
+
     public IReadOnlyList<ICommandPlugin> Find(string query)
     {
         return _commands.Values
@@ -35,7 +38,8 @@ public sealed class CommandRegistry(IEnumerable<ICommandPlugin> plugins)
         }
 
         var supplied = tokens.Skip(1).ToList();
-        if (supplied.Count > command.Parameters.Count)
+        var variadicCommand = command as IVariadicCommandPlugin;
+        if (variadicCommand is null && supplied.Count > command.Parameters.Count)
         {
             throw new CommandInputException(
                 $"命令“{command.Name}”最多接受 {command.Parameters.Count} 个参数，但收到了 {supplied.Count} 个。");
@@ -58,6 +62,14 @@ public sealed class CommandRegistry(IEnumerable<ICommandPlugin> plugins)
             }
 
             arguments[parameter.Name] = ConvertValue(command.Name, parameter, rawValue);
+        }
+
+        if (variadicCommand is not null)
+        {
+            arguments[variadicCommand.RemainingParameter.Name] = supplied
+                .Skip(command.Parameters.Count)
+                .Select(value => ConvertValue(command.Name, variadicCommand.RemainingParameter, value))
+                .ToList();
         }
 
         return await command.ExecuteAsync(arguments, cancellationToken);
