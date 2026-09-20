@@ -41,7 +41,7 @@ public sealed class OpenWorkspaceRepositoryCommand(
     string repositoryRoot,
     IRepositoryLauncher launcher) : ICommandPlugin, ICommandValueSuggestionProvider
 {
-    public string Name => "openwsrepo";
+    public string Name => "openrepo";
 
     public string Description => "使用 VS Code 打开 WiseTechGlobal 仓库";
 

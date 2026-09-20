@@ -27,6 +27,7 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
             _repositoryRoot,
             new RecordingRepositoryLauncher());
 
+        Assert.Equal("openrepo", command.Name);
         var suggestions = command.GetSuggestions(0, "a");
 
         Assert.Equal(["Alpha", "Another", "Beta"], suggestions.Select(item => item.Value));
