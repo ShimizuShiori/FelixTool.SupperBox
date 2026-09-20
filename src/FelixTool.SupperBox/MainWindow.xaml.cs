@@ -19,7 +19,9 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         _configuration = new SystemConfiguration();
         _configuration.Reloaded += Configuration_Reloaded;
         var pluginDirectory = Path.Combine(AppContext.BaseDirectory, "Plugins");
-        var loadResult = PluginLoader.Load(pluginDirectory);
+        var itemSelection = new ItemSelectionService(this);
+        var pluginContext = new PluginContext(itemSelection);
+        var loadResult = PluginLoader.Load(pluginDirectory, pluginContext);
         var launcher = new ExternalLauncher();
         var commands = loadResult.Plugins.Concat<ICommandPlugin>(
         [
@@ -27,7 +29,11 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             new SystemConfigCommand(_configuration, launcher),
             new OpenWorkspaceRepositoryCommand(
                 @"C:\git\GitHub\WiseTechGlobal",
-                new VisualStudioCodeLauncher())
+                new VisualStudioCodeLauncher()),
+            new OpenSolutionCommand(
+                itemSelection,
+                new VisualStudioLocator(),
+                new VisualStudioSolutionLauncher())
         ]).ToList();
         _configuration.Bind(commands);
         _registry = new CommandRegistry(commands);

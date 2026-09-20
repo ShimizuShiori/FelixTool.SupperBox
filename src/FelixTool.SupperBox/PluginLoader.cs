@@ -10,7 +10,7 @@ public sealed record PluginLoadResult(
 
 public static class PluginLoader
 {
-    public static PluginLoadResult Load(string pluginDirectory)
+    public static PluginLoadResult Load(string pluginDirectory, IPluginContext context)
     {
         Directory.CreateDirectory(pluginDirectory);
         var plugins = new List<ICommandPlugin>();
@@ -25,7 +25,13 @@ public static class PluginLoader
                 {
                     try
                     {
-                        plugins.Add((ICommandPlugin)Activator.CreateInstance(type)!);
+                        var plugin = (ICommandPlugin)Activator.CreateInstance(type)!;
+                        if (plugin is IPluginContextAware contextAware)
+                        {
+                            contextAware.Initialize(context);
+                        }
+
+                        plugins.Add(plugin);
                     }
                     catch (Exception exception)
                     {

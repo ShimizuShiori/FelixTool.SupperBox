@@ -16,6 +16,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 ```text
 websearch google "SupperBox launcher"
 openwsrepo MyRepository
+opensln C:\git\MyRepository\src
 sysconfig
 ```
 
@@ -31,6 +32,11 @@ Tab 补全。
 `openwsrepo <repoName>` 使用 VS Code 打开
 `C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。输入 `openwsrepo ` 后会显示仓库名称
 并支持 Tab 补全；名称不存在时不会执行任何操作。
+
+`opensln <filepath>` 从指定文件或目录开始，逐级向上查找当前目录中的 `.sln` 和
+`.slnx` 文件。只找到一个时直接打开；找到多个时显示通用选择窗口。程序通过 Visual
+Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 Preview），
+也支持通过 `VSINSTALLDIR` 环境变量定位。
 
 配置文件的根属性名会自动对应同名命令插件（不区分大小写）。实现
 `IConfigurableCommandPlugin` 的插件会在启动和配置热重载时收到其专属 JSON 节点，
@@ -75,3 +81,22 @@ public sealed class HelloCommand : ICommandPlugin
 
 命令名不区分大小写，且必须唯一。宿主会完成参数数量检查以及文本、整数、数字、
 布尔值的类型转换；插件只需实现业务逻辑并返回 `CommandResult`。
+
+插件需要用户从多个条目中选择一个时，可额外实现 `IPluginContextAware`。宿主会在
+加载插件后注入 `IPluginContext`，插件调用 `context.ItemSelection.SelectAsync(...)`
+即可复用统一的选择窗口；用户按 Esc 取消时会抛出 `OperationCanceledException`。
+
+```csharp
+public sealed class ChooseCommand : ICommandPlugin, IPluginContextAware
+{
+    private IPluginContext? _context;
+
+    public void Initialize(IPluginContext context) => _context = context;
+
+    // 在 ExecuteAsync 中：
+    // var selected = await _context!.ItemSelection.SelectAsync(
+    //     "选择条目",
+    //     values.Select(value => new SelectionItem<string>(value, value)).ToList(),
+    //     cancellationToken);
+}
+```

@@ -53,3 +53,26 @@ public interface IConfigurableCommandPlugin : ICommandPlugin
 {
     void ApplyConfiguration(JsonElement configuration);
 }
+
+public sealed record SelectionItem<T>(
+    T Value,
+    string Label,
+    string Description = "");
+
+public interface IItemSelectionService
+{
+    Task<T> SelectAsync<T>(
+        string title,
+        IReadOnlyList<SelectionItem<T>> items,
+        CancellationToken cancellationToken);
+}
+
+public interface IPluginContext
+{
+    IItemSelectionService ItemSelection { get; }
+}
+
+public interface IPluginContextAware
+{
+    void Initialize(IPluginContext context);
+}
