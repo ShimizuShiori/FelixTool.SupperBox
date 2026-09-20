@@ -16,10 +16,32 @@ dotnet run --project .\src\FelixTool.SupperBox
 ```text
 echo "hello world"
 add 1.5 2
+websearch google "SupperBox launcher"
+sysconfig
 ```
 
 输入命令名时会显示匹配命令、参数类型和用途。参数可用单引号或双引号包裹；
 反斜杠路径（如 `C:\Temp\a.txt`）会被原样保留。
+
+`sysconfig` 会打开 `%APPDATA%\FelixTool.SupperBox\config.json`。其中
+`websearch.engine` 定义搜索引擎名称和 URL 格式，`{0}`、`{1}` 等零基占位符按顺序对应
+`websearch <engine> <kw1> <kw2> ...` 的关键词，并会在打开浏览器前进行 URL 编码。
+保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
+Tab 补全。
+
+配置文件的根属性名会自动对应同名命令插件（不区分大小写）。实现
+`IConfigurableCommandPlugin` 的插件会在启动和配置热重载时收到其专属 JSON 节点，
+因此新增插件配置无需修改宿主的配置结构。
+
+```json
+{
+  "websearch": {
+    "engine": {
+      "foo": "https://www.foo.com?q={0}&type={1}&dd={2}"
+    }
+  }
+}
+```
 
 ## 编写插件
 
