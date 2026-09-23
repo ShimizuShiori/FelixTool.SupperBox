@@ -66,6 +66,8 @@ public sealed class OpenWorkspaceRepositoryCommand(
     string repositoryRoot,
     IRepositoryLauncher launcher) : ICommandPlugin, ICommandValueSuggestionProvider
 {
+    private readonly RepositoryCatalog _repositories = new(repositoryRoot);
+
     public string Name => "openrepo";
 
     public string Description => "使用指定程序打开 WiseTechGlobal 仓库";
@@ -90,7 +92,7 @@ public sealed class OpenWorkspaceRepositoryCommand(
             _ => throw new CommandInputException(
                 $"不支持 runner“{runnerName}”，可选值为 code、cmd、copilot、exp。")
         };
-        var repository = FindRepository((string)arguments["repoName"]!);
+        var repository = _repositories.Find((string)arguments["repoName"]!);
         if (repository is not null)
         {
             launcher.Open(runner, repository);
@@ -120,7 +122,7 @@ public sealed class OpenWorkspaceRepositoryCommand(
             return [];
         }
 
-        return GetRepositories()
+        return _repositories.GetAll()
             .Select(Path.GetFileName)
             .OfType<string>()
             .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -130,13 +132,17 @@ public sealed class OpenWorkspaceRepositoryCommand(
             .ToList();
     }
 
-    private string? FindRepository(string repositoryName)
+}
+
+public sealed class RepositoryCatalog(string repositoryRoot)
+{
+    public string? Find(string repositoryName)
     {
-        return GetRepositories().FirstOrDefault(path =>
+        return GetAll().FirstOrDefault(path =>
             Path.GetFileName(path).Equals(repositoryName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private IEnumerable<string> GetRepositories()
+    public IEnumerable<string> GetAll()
     {
         return Directory.Exists(repositoryRoot)
             ? Directory.EnumerateDirectories(repositoryRoot)
