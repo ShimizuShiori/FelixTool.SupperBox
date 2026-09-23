@@ -29,7 +29,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             new SystemConfigCommand(_configuration, launcher),
             new OpenWorkspaceRepositoryCommand(
                 @"C:\git\GitHub\WiseTechGlobal",
-                new VisualStudioCodeLauncher()),
+                new RepositoryLauncher()),
             new OpenSolutionCommand(
                 itemSelection,
                 new VisualStudioLocator(),

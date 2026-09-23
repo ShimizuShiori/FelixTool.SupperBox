@@ -21,19 +21,44 @@ public sealed class ExternalLauncher : IExternalLauncher
 
 public interface IRepositoryLauncher
 {
-    void Open(string repositoryPath);
+    void Open(RepositoryRunner runner, string repositoryPath);
 }
 
-public sealed class VisualStudioCodeLauncher : IRepositoryLauncher
+public enum RepositoryRunner
 {
-    public void Open(string repositoryPath)
+    Code,
+    CommandPrompt,
+    Copilot,
+    Explorer
+}
+
+public sealed class RepositoryLauncher : IRepositoryLauncher
+{
+    public void Open(RepositoryRunner runner, string repositoryPath)
     {
-        var startInfo = new ProcessStartInfo("code")
+        Process.Start(CreateStartInfo(runner, repositoryPath));
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(RepositoryRunner runner, string repositoryPath)
+    {
+        var startInfo = new ProcessStartInfo(runner switch
         {
+            RepositoryRunner.Code => "code",
+            RepositoryRunner.CommandPrompt => "cmd.exe",
+            RepositoryRunner.Copilot => "copilot",
+            RepositoryRunner.Explorer => "explorer.exe",
+            _ => throw new ArgumentOutOfRangeException(nameof(runner), runner, null)
+        })
+        {
+            WorkingDirectory = repositoryPath,
             UseShellExecute = true
         };
-        startInfo.ArgumentList.Add(repositoryPath);
-        Process.Start(startInfo);
+        if (runner is RepositoryRunner.Code or RepositoryRunner.Explorer)
+        {
+            startInfo.ArgumentList.Add(repositoryPath);
+        }
+
+        return startInfo;
     }
 }
 
@@ -43,10 +68,11 @@ public sealed class OpenWorkspaceRepositoryCommand(
 {
     public string Name => "openrepo";
 
-    public string Description => "使用 VS Code 打开 WiseTechGlobal 仓库";
+    public string Description => "使用指定程序打开 WiseTechGlobal 仓库";
 
     public IReadOnlyList<CommandParameter> Parameters { get; } =
     [
+        new("runner", CommandParameterType.String, "打开方式：code、cmd、copilot 或 exp"),
         new("repoName", CommandParameterType.String, "公司代码仓库根目录下的仓库名称")
     ];
 
@@ -54,10 +80,20 @@ public sealed class OpenWorkspaceRepositoryCommand(
         IReadOnlyDictionary<string, object?> arguments,
         CancellationToken cancellationToken)
     {
+        var runnerName = (string)arguments["runner"]!;
+        var runner = runnerName.ToLowerInvariant() switch
+        {
+            "code" => RepositoryRunner.Code,
+            "cmd" => RepositoryRunner.CommandPrompt,
+            "copilot" => RepositoryRunner.Copilot,
+            "exp" => RepositoryRunner.Explorer,
+            _ => throw new CommandInputException(
+                $"不支持 runner“{runnerName}”，可选值为 code、cmd、copilot、exp。")
+        };
         var repository = FindRepository((string)arguments["repoName"]!);
         if (repository is not null)
         {
-            launcher.Open(repository);
+            launcher.Open(runner, repository);
         }
 
         return Task.FromResult(CommandResult.Ok(string.Empty));
@@ -65,7 +101,21 @@ public sealed class OpenWorkspaceRepositoryCommand(
 
     public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
     {
-        if (parameterIndex != 0)
+        if (parameterIndex == 0)
+        {
+            return new Dictionary<string, string>
+            {
+                ["code"] = "使用 VS Code 打开仓库",
+                ["cmd"] = "在仓库目录打开命令提示符",
+                ["copilot"] = "在仓库目录启动 Copilot",
+                ["exp"] = "在文件资源管理器中打开仓库"
+            }
+                .Where(item => item.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Select(item => new CommandValueSuggestion(item.Key, item.Value))
+                .ToList();
+        }
+
+        if (parameterIndex != 1)
         {
             return [];
         }
@@ -76,7 +126,7 @@ public sealed class OpenWorkspaceRepositoryCommand(
             .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(name => name)
-            .Select(name => new CommandValueSuggestion(name, "使用 VS Code 打开该仓库"))
+            .Select(name => new CommandValueSuggestion(name, "打开该仓库"))
             .ToList();
     }
 

@@ -24,7 +24,10 @@ dotnet run --project .\src\FelixTool.SupperBox
 
 ```text
 websearch google "SupperBox launcher"
-openrepo MyRepository
+openrepo code MyRepository
+openrepo cmd MyRepository
+openrepo copilot MyRepository
+openrepo exp MyRepository
 opensln C:\git\MyRepository\src
 sysconfig
 ```
@@ -38,9 +41,10 @@ sysconfig
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
 
-`openrepo <repoName>` 使用 VS Code 打开
-`C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。输入 `openrepo ` 后会显示仓库名称
-并支持 Tab 补全；名称不存在时不会执行任何操作。
+`openrepo <runner> <repoName>` 使用指定程序打开
+`C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。`runner` 可选 `code`（VS Code）、
+`cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
+管理器）。runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执行任何操作。
 
 `opensln <filepath>` 从指定文件或目录开始，逐级向上查找当前目录中的 `.sln` 和
 `.slnx` 文件。只找到一个时直接打开；找到多个时显示通用选择窗口。程序通过 Visual
