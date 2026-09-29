@@ -116,6 +116,11 @@ public sealed class SystemConfiguration : IDisposable
                     property.Name.Equals(plugin.Name, StringComparison.OrdinalIgnoreCase));
             if (section.Value.ValueKind == JsonValueKind.Undefined)
             {
+                if (plugin is IOptionalConfigurableCommandPlugin)
+                {
+                    continue;
+                }
+
                 throw new InvalidDataException($"配置中缺少插件“{plugin.Name}”对应的根属性。");
             }
 
@@ -132,6 +137,10 @@ public sealed class SystemConfiguration : IDisposable
                 ["bing"] = "https://www.bing.com/search?q={0}",
                 ["google"] = "https://www.google.com/search?q={0}"
             }
+        },
+        prompts = new Dictionary<string, string>
+        {
+            ["translate"] = "Translate the following text into {0}: {1}"
         }
     };
 }

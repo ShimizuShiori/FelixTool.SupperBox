@@ -54,6 +54,10 @@ public interface IConfigurableCommandPlugin : ICommandPlugin
     void ApplyConfiguration(JsonElement configuration);
 }
 
+public interface IOptionalConfigurableCommandPlugin : IConfigurableCommandPlugin
+{
+}
+
 public sealed record SelectionItem<T>(
     T Value,
     string Label,
@@ -67,9 +71,16 @@ public interface IItemSelectionService
         CancellationToken cancellationToken);
 }
 
+public interface IOutputService
+{
+    Task ShowAsync(string content, CancellationToken cancellationToken);
+}
+
 public interface IPluginContext
 {
     IItemSelectionService ItemSelection { get; }
+
+    IOutputService Output { get; }
 }
 
 public interface IPluginContextAware

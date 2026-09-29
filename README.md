@@ -24,6 +24,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 
 ```text
 websearch google "SupperBox launcher"
+prompts translate Chinese "Hello world"
 openrepo code MyRepository
 openrepo cmd MyRepository
 openrepo copilot MyRepository
@@ -40,6 +41,11 @@ sysconfig
 `websearch <engine> <kw1> <kw2> ...` 的关键词，并会在打开浏览器前进行 URL 编码。
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
+
+`prompts <type> <arg0> <arg1> ...` 从配置文件的 `prompts` section 读取提示词，
+并按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
+显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
+窗口在显示五分钟后会自动关闭。输入 `prompts ` 时可用方向键选择 type，并按 Tab 补全。
 
 `openrepo <runner> <repoName>` 使用指定程序打开
 `C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。`runner` 可选 `code`（VS Code）、
@@ -61,6 +67,9 @@ Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 
     "engine": {
       "foo": "https://www.foo.com?q={0}&type={1}&dd={2}"
     }
+  },
+  "prompts": {
+    "translate": "Translate the following text into {0}: {1}"
   }
 }
 ```
@@ -98,6 +107,7 @@ public sealed class HelloCommand : ICommandPlugin
 插件需要用户从多个条目中选择一个时，可额外实现 `IPluginContextAware`。宿主会在
 加载插件后注入 `IPluginContext`，插件调用 `context.ItemSelection.SelectAsync(...)`
 即可复用统一的选择窗口；用户按 Esc 取消时会抛出 `OperationCanceledException`。
+插件也可调用 `context.Output.ShowAsync(...)`，通过统一的 Output Box 展示并复制文本。
 
 ```csharp
 public sealed class ChooseCommand : ICommandPlugin, IPluginContextAware

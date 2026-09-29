@@ -261,6 +261,96 @@ public sealed partial class WebSearchCommand(IExternalLauncher launcher) :
     private static partial Regex LegacyPlaceholderRegex();
 }
 
+public sealed partial class PromptsCommand(IOutputService output) :
+    IVariadicCommandPlugin,
+    ICommandValueSuggestionProvider,
+    IOptionalConfigurableCommandPlugin
+{
+    private IReadOnlyDictionary<string, string> _prompts =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    public string Name => "prompts";
+
+    public string Description => "生成配置文件中定义的提示词";
+
+    public IReadOnlyList<CommandParameter> Parameters { get; } =
+    [
+        new("type", CommandParameterType.String, "配置文件 prompts 中的提示词类型")
+    ];
+
+    public CommandParameter RemainingParameter { get; } =
+        new("arguments", CommandParameterType.String, "依次替换提示词中的 {0}、{1}、...");
+
+    public async Task<CommandResult> ExecuteAsync(
+        IReadOnlyDictionary<string, object?> arguments,
+        CancellationToken cancellationToken)
+    {
+        var type = (string)arguments["type"]!;
+        if (!_prompts.TryGetValue(type, out var format))
+        {
+            throw new CommandInputException($"找不到提示词类型“{type}”。请运行 sysconfig 进行配置。");
+        }
+
+        var values = (IReadOnlyList<object>)arguments["arguments"]!;
+        var prompt = BuildPrompt(format, values.Select(value => (string)value).ToList());
+        await output.ShowAsync(prompt, cancellationToken);
+        return CommandResult.Ok($"已生成 {type} 提示词。");
+    }
+
+    public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
+    {
+        if (parameterIndex != 0)
+        {
+            return [];
+        }
+
+        var prompts = Volatile.Read(ref _prompts);
+        return prompts.Keys
+            .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(name => name)
+            .Select(name => new CommandValueSuggestion(name, prompts[name]))
+            .ToList();
+    }
+
+    public void ApplyConfiguration(JsonElement configuration)
+    {
+        if (configuration.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException("prompts 配置必须是包含提示词类型的对象。");
+        }
+
+        var prompts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in configuration.EnumerateObject())
+        {
+            var format = property.Value.GetString();
+            if (string.IsNullOrWhiteSpace(property.Name) || string.IsNullOrWhiteSpace(format))
+            {
+                throw new InvalidDataException("提示词类型和内容不能为空。");
+            }
+
+            prompts.Add(property.Name, format);
+        }
+
+        Volatile.Write(ref _prompts, prompts);
+    }
+
+    public static string BuildPrompt(string format, IReadOnlyList<string> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(format);
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        return PlaceholderRegex().Replace(format, match =>
+        {
+            var index = int.Parse(match.Groups[1].Value);
+            return index < arguments.Count ? arguments[index] : match.Value;
+        });
+    }
+
+    [GeneratedRegex(@"\{([0-9]+)\}", RegexOptions.CultureInvariant)]
+    private static partial Regex PlaceholderRegex();
+}
+
 public sealed class SystemConfigCommand(
     SystemConfiguration configuration,
     IExternalLauncher launcher) : ICommandPlugin

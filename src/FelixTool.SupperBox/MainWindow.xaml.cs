@@ -20,13 +20,15 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         _configuration.Reloaded += Configuration_Reloaded;
         var pluginDirectory = Path.Combine(AppContext.BaseDirectory, "Plugins");
         var itemSelection = new ItemSelectionService(this);
-        var pluginContext = new PluginContext(itemSelection);
+        var output = new OutputService(this);
+        var pluginContext = new PluginContext(itemSelection, output);
         var loadResult = PluginLoader.Load(pluginDirectory, pluginContext);
         var launcher = new ExternalLauncher();
         const string repositoryRoot = @"C:\git\GitHub\WiseTechGlobal";
         var commands = loadResult.Plugins.Concat<ICommandPlugin>(
         [
             new WebSearchCommand(launcher),
+            new PromptsCommand(output),
             new SystemConfigCommand(_configuration, launcher),
             new OpenWorkspaceRepositoryCommand(
                 repositoryRoot,
