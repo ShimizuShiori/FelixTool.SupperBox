@@ -3,7 +3,9 @@ using FelixTool.SupperBox.Abstractions;
 
 namespace FelixTool.SupperBox;
 
-public sealed record PluginContext(IItemSelectionService ItemSelection) : IPluginContext;
+public sealed record PluginContext(
+    IItemSelectionService ItemSelection,
+    IOutputService Output) : IPluginContext;
 
 public sealed class ItemSelectionService(Window owner) : IItemSelectionService
 {
