@@ -36,6 +36,14 @@ public partial class OutputWindow : Window
         Close();
     }
 
+    private void Title_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
     private void Window_PreviewKeyDown(
         object sender,
         System.Windows.Input.KeyEventArgs e)
