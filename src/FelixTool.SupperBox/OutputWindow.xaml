@@ -4,11 +4,10 @@
         Title="Output"
         Width="900"
         Height="560"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
-        Topmost="True"
         Background="Transparent"
         AllowsTransparency="True"
         PreviewKeyDown="Window_PreviewKeyDown">

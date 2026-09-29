@@ -12,32 +12,22 @@ public sealed class OutputService(Window owner) : IOutputService
 
         if (owner.Dispatcher.CheckAccess())
         {
-            await ShowOnUiThreadAsync(content, cancellationToken);
+            ShowOnUiThread(content, cancellationToken);
             return;
         }
 
-        var task = await owner.Dispatcher.InvokeAsync(
-            () => ShowOnUiThreadAsync(content, cancellationToken));
-        await task;
+        await owner.Dispatcher.InvokeAsync(
+            () => ShowOnUiThread(content, cancellationToken));
     }
 
-    private Task ShowOnUiThreadAsync(string content, CancellationToken cancellationToken)
+    private void ShowOnUiThread(string content, CancellationToken cancellationToken)
     {
-        var completion = new TaskCompletionSource(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var window = new OutputWindow(content)
-        {
-            Owner = owner
-        };
+        var window = new OutputWindow(content);
         var registration = cancellationToken.Register(
             () => window.Dispatcher.BeginInvoke(window.Close));
 
-        window.Closed += (_, _) =>
-        {
-            registration.Dispose();
-            completion.TrySetResult();
-        };
+        window.Closed += (_, _) => registration.Dispose();
         window.Show();
-        return completion.Task;
+        owner.Hide();
     }
 }
