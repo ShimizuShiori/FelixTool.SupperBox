@@ -351,6 +351,86 @@ public sealed partial class PromptsCommand(IOutputService output) :
     private static partial Regex PlaceholderRegex();
 }
 
+public sealed class OpenPageCommand(IExternalLauncher launcher) :
+    IOptionalConfigurableCommandPlugin,
+    ICommandValueSuggestionProvider
+{
+    private IReadOnlyDictionary<string, string> _pages =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    public string Name => "openpage";
+
+    public string ConfigurationSectionName => "pages";
+
+    public string Description => "使用默认浏览器打开配置的页面";
+
+    public IReadOnlyList<CommandParameter> Parameters { get; } =
+    [
+        new("pageName", CommandParameterType.String, "配置文件 pages 中的页面名称")
+    ];
+
+    public Task<CommandResult> ExecuteAsync(
+        IReadOnlyDictionary<string, object?> arguments,
+        CancellationToken cancellationToken)
+    {
+        var pageName = (string)arguments["pageName"]!;
+        if (!_pages.TryGetValue(pageName, out var url))
+        {
+            throw new CommandInputException($"找不到页面“{pageName}”。请运行 sysconfig 进行配置。");
+        }
+
+        launcher.Open(url);
+        return Task.FromResult(CommandResult.Ok($"已打开页面 {pageName}。"));
+    }
+
+    public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
+    {
+        if (parameterIndex != 0)
+        {
+            return [];
+        }
+
+        var pages = Volatile.Read(ref _pages);
+        return pages.Keys
+            .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(name => name)
+            .Select(name => new CommandValueSuggestion(name, pages[name]))
+            .ToList();
+    }
+
+    public void ApplyConfiguration(JsonElement configuration)
+    {
+        if (configuration.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException("pages 配置必须是包含页面名称和地址的对象。");
+        }
+
+        var pages = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in configuration.EnumerateObject())
+        {
+            var url = property.Value.GetString();
+            if (string.IsNullOrWhiteSpace(property.Name) || string.IsNullOrWhiteSpace(url))
+            {
+                throw new InvalidDataException("页面名称和地址不能为空。");
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new InvalidDataException($"页面“{property.Name}”必须配置有效的 HTTP 或 HTTPS 地址。");
+            }
+
+            if (!pages.TryAdd(property.Name, url))
+            {
+                throw new InvalidDataException($"页面名称“{property.Name}”重复。");
+            }
+        }
+
+        Volatile.Write(ref _pages, pages);
+    }
+}
+
 public sealed class SystemConfigCommand(
     SystemConfiguration configuration,
     IExternalLauncher launcher) : ICommandPlugin

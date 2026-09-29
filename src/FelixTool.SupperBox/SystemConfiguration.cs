@@ -113,7 +113,9 @@ public sealed class SystemConfiguration : IDisposable
         {
             var section = root.EnumerateObject()
                 .FirstOrDefault(property =>
-                    property.Name.Equals(plugin.Name, StringComparison.OrdinalIgnoreCase));
+                    property.Name.Equals(
+                        plugin.ConfigurationSectionName,
+                        StringComparison.OrdinalIgnoreCase));
             if (section.Value.ValueKind == JsonValueKind.Undefined)
             {
                 if (plugin is IOptionalConfigurableCommandPlugin)
@@ -121,7 +123,8 @@ public sealed class SystemConfiguration : IDisposable
                     continue;
                 }
 
-                throw new InvalidDataException($"配置中缺少插件“{plugin.Name}”对应的根属性。");
+                throw new InvalidDataException(
+                    $"配置中缺少插件“{plugin.Name}”对应的根属性“{plugin.ConfigurationSectionName}”。");
             }
 
             plugin.ApplyConfiguration(section.Value);
@@ -141,6 +144,10 @@ public sealed class SystemConfiguration : IDisposable
         prompts = new Dictionary<string, string>
         {
             ["translate"] = "Translate the following text into {0}: {1}"
+        },
+        pages = new Dictionary<string, string>
+        {
+            ["baidu"] = "https://www.baidu.com/"
         }
     };
 }

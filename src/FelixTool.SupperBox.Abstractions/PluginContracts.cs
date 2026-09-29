@@ -51,6 +51,8 @@ public interface ICommandValueSuggestionProvider
 
 public interface IConfigurableCommandPlugin : ICommandPlugin
 {
+    string ConfigurationSectionName => Name;
+
     void ApplyConfiguration(JsonElement configuration);
 }
 
