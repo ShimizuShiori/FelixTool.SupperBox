@@ -33,9 +33,39 @@ public sealed class SystemConfigurationTests
         }
     }
 
-    private sealed class ConfigurableCommand : IConfigurableCommandPlugin
+    [Fact]
+    public void Bind_DispatchesExplicitConfigurationSectionName()
     {
-        public string Name => "demo";
+        var applicationData = Path.Combine(
+            Path.GetTempPath(),
+            $"SupperBoxTests-{Guid.NewGuid():N}");
+        var configurationDirectory = Path.Combine(applicationData, "FelixTool.SupperBox");
+        Directory.CreateDirectory(configurationDirectory);
+        File.WriteAllText(
+            Path.Combine(configurationDirectory, "config.json"),
+            """{"PAGES":{"value":"configured"}}""");
+
+        try
+        {
+            using var configuration = new SystemConfiguration(applicationData);
+            var plugin = new ConfigurableCommand("openpage", "pages");
+
+            configuration.Bind([plugin]);
+
+            Assert.Equal("configured", plugin.Value);
+        }
+        finally
+        {
+            Directory.Delete(applicationData, true);
+        }
+    }
+
+    private sealed class ConfigurableCommand(
+        string name = "demo",
+        string? configurationSectionName = null) : IConfigurableCommandPlugin
+    {
+        public string Name => name;
+        public string ConfigurationSectionName => configurationSectionName ?? Name;
         public string Description => "Configurable";
         public IReadOnlyList<CommandParameter> Parameters => [];
         public string? Value { get; private set; }

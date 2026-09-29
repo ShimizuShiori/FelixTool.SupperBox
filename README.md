@@ -25,6 +25,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 ```text
 websearch google "SupperBox launcher"
 prompts translate Chinese "Hello world"
+openpage baidu
 openrepo code MyRepository
 openrepo cmd MyRepository
 openrepo copilot MyRepository
@@ -47,6 +48,9 @@ Tab 补全。
 显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
 窗口在显示五分钟后会自动关闭。输入 `prompts ` 时可用方向键选择 type，并按 Tab 补全。
 
+`openpage <pageName>` 使用系统默认浏览器打开配置文件 `pages` section 中对应的
+HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称，并按 Tab 补全。
+
 `openrepo <runner> <repoName>` 使用指定程序打开
 `C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。`runner` 可选 `code`（VS Code）、
 `cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
@@ -57,7 +61,8 @@ Tab 补全。
 Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 Preview），
 也支持通过 `VSINSTALLDIR` 环境变量定位。
 
-配置文件的根属性名会自动对应同名命令插件（不区分大小写）。实现
+配置文件的根属性名默认对应同名命令插件（不区分大小写），插件也可显式指定其他
+section 名。实现
 `IConfigurableCommandPlugin` 的插件会在启动和配置热重载时收到其专属 JSON 节点，
 因此新增插件配置无需修改宿主的配置结构。
 
@@ -70,6 +75,9 @@ Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 
   },
   "prompts": {
     "translate": "Translate the following text into {0}: {1}"
+  },
+  "pages": {
+    "baidu": "https://www.baidu.com/"
   }
 }
 ```
