@@ -24,7 +24,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 
 ```text
 websearch google "SupperBox launcher"
-prompts translate Chinese "Hello world"
+quicktext translate Chinese "Hello world"
 openpage baidu
 openrepo code MyRepository
 openrepo cmd MyRepository
@@ -43,10 +43,11 @@ sysconfig
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
 
-`prompts <type> <arg0> <arg1> ...` 从配置文件的 `prompts` section 读取提示词，
+`quicktext <type> <arg0> <arg1> ...` 从配置文件的 `quicktexts` section 读取快捷文本，
 并按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
 显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
-窗口在显示五分钟后会自动关闭。输入 `prompts ` 时可用方向键选择 type，并按 Tab 补全。
+窗口在显示五分钟后会自动关闭。输入 `quicktext ` 时可用方向键选择 type，并按 Tab 补全。
+已有配置需要将根属性 `prompts` 重命名为 `quicktexts`，旧配置节不再读取。
 
 `openpage <pageName>` 使用系统默认浏览器打开配置文件 `pages` section 中对应的
 HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称，并按 Tab 补全。
@@ -73,7 +74,7 @@ section 名。实现
       "foo": "https://www.foo.com?q={0}&type={1}&dd={2}"
     }
   },
-  "prompts": {
+  "quicktexts": {
     "translate": "Translate the following text into {0}: {1}"
   },
   "pages": {

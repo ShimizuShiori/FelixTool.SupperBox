@@ -261,40 +261,42 @@ public sealed partial class WebSearchCommand(IExternalLauncher launcher) :
     private static partial Regex LegacyPlaceholderRegex();
 }
 
-public sealed partial class PromptsCommand(IOutputService output) :
+public sealed partial class QuickTextCommand(IOutputService output) :
     IVariadicCommandPlugin,
     ICommandValueSuggestionProvider,
     IOptionalConfigurableCommandPlugin
 {
-    private IReadOnlyDictionary<string, string> _prompts =
+    private IReadOnlyDictionary<string, string> _quickTexts =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    public string Name => "prompts";
+    public string Name => "quicktext";
 
-    public string Description => "生成配置文件中定义的提示词";
+    public string ConfigurationSectionName => "quicktexts";
+
+    public string Description => "生成配置文件中定义的快捷文本";
 
     public IReadOnlyList<CommandParameter> Parameters { get; } =
     [
-        new("type", CommandParameterType.String, "配置文件 prompts 中的提示词类型")
+        new("type", CommandParameterType.String, "配置文件 quicktexts 中的快捷文本类型")
     ];
 
     public CommandParameter RemainingParameter { get; } =
-        new("arguments", CommandParameterType.String, "依次替换提示词中的 {0}、{1}、...");
+        new("arguments", CommandParameterType.String, "依次替换快捷文本中的 {0}、{1}、...");
 
     public async Task<CommandResult> ExecuteAsync(
         IReadOnlyDictionary<string, object?> arguments,
         CancellationToken cancellationToken)
     {
         var type = (string)arguments["type"]!;
-        if (!_prompts.TryGetValue(type, out var format))
+        if (!_quickTexts.TryGetValue(type, out var format))
         {
-            throw new CommandInputException($"找不到提示词类型“{type}”。请运行 sysconfig 进行配置。");
+            throw new CommandInputException($"找不到快捷文本类型“{type}”。请运行 sysconfig 进行配置。");
         }
 
         var values = (IReadOnlyList<object>)arguments["arguments"]!;
-        var prompt = BuildPrompt(format, values.Select(value => (string)value).ToList());
-        await output.ShowAsync(prompt, cancellationToken);
-        return CommandResult.Ok($"已生成 {type} 提示词。");
+        var text = BuildText(format, values.Select(value => (string)value).ToList());
+        await output.ShowAsync(text, cancellationToken);
+        return CommandResult.Ok($"已生成 {type} 快捷文本。");
     }
 
     public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
@@ -304,12 +306,12 @@ public sealed partial class PromptsCommand(IOutputService output) :
             return [];
         }
 
-        var prompts = Volatile.Read(ref _prompts);
-        return prompts.Keys
+        var quickTexts = Volatile.Read(ref _quickTexts);
+        return quickTexts.Keys
             .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(name => name)
-            .Select(name => new CommandValueSuggestion(name, prompts[name]))
+            .Select(name => new CommandValueSuggestion(name, quickTexts[name]))
             .ToList();
     }
 
@@ -317,25 +319,25 @@ public sealed partial class PromptsCommand(IOutputService output) :
     {
         if (configuration.ValueKind != JsonValueKind.Object)
         {
-            throw new InvalidDataException("prompts 配置必须是包含提示词类型的对象。");
+            throw new InvalidDataException("quicktexts 配置必须是包含快捷文本类型的对象。");
         }
 
-        var prompts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var quickTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in configuration.EnumerateObject())
         {
             var format = property.Value.GetString();
             if (string.IsNullOrWhiteSpace(property.Name) || string.IsNullOrWhiteSpace(format))
             {
-                throw new InvalidDataException("提示词类型和内容不能为空。");
+                throw new InvalidDataException("快捷文本类型和内容不能为空。");
             }
 
-            prompts.Add(property.Name, format);
+            quickTexts.Add(property.Name, format);
         }
 
-        Volatile.Write(ref _prompts, prompts);
+        Volatile.Write(ref _quickTexts, quickTexts);
     }
 
-    public static string BuildPrompt(string format, IReadOnlyList<string> arguments)
+    public static string BuildText(string format, IReadOnlyList<string> arguments)
     {
         ArgumentNullException.ThrowIfNull(format);
         ArgumentNullException.ThrowIfNull(arguments);

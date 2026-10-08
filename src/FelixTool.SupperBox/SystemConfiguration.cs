@@ -141,7 +141,7 @@ public sealed class SystemConfiguration : IDisposable
                 ["google"] = "https://www.google.com/search?q={0}"
             }
         },
-        prompts = new Dictionary<string, string>
+        quicktexts = new Dictionary<string, string>
         {
             ["translate"] = "Translate the following text into {0}: {1}"
         },
