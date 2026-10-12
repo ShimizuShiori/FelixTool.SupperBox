@@ -43,6 +43,15 @@ sysconfig
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
 
+配置文件通过 `$schema` 引用同目录的 `config.schema.json`，支持编辑器校验、字段说明和
+自动补全。架构源文件位于 `src\FelixTool.SupperBox\config.schema.json`，纳入代码托管并
+随程序发布。每次加载配置（包括热重载）时，如果用户目录中的架构文件不存在，或其
+`x-schema-version` 小于随程序发布的版本，就自动复制更新；没有版本字段的架构按旧版
+处理，同版本或更高版本不会覆盖。修改架构时应递增这个正整数版本。
+程序启动时会为新旧配置自动添加或更新 `$schema` 引用，保留其他配置内容。
+自动写入配置时保留可读的汉字和符号，只对 JSON 必需的引号、反斜杠和控制字符转义。
+架构允许额外根属性，兼容外部插件配置；架构或复制错误会通过现有错误机制报告。
+
 `quicktext <type> <arg0> <arg1> ...` 从配置文件的 `quicktexts` section 读取快捷文本，
 并按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
 显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
@@ -74,6 +83,7 @@ section 名。实现
 
 ```json
 {
+  "$schema": "config.schema.json",
   "repositories": {
     "roots": [
       "C:\\git\\GitHub\\WiseTechGlobal",

@@ -1,14 +1,19 @@
 using System.IO;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using FelixTool.SupperBox.Abstractions;
 
 namespace FelixTool.SupperBox;
 
 public sealed class SystemConfiguration : IDisposable
 {
+    private const string SchemaFileName = "config.schema.json";
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNameCaseInsensitive = true
     };
 
@@ -32,6 +37,7 @@ public sealed class SystemConfiguration : IDisposable
         }
 
         _root = LoadFile();
+        EnsureSchemaReference();
         _watcher = new FileSystemWatcher(directory, Path.GetFileName(FilePath))
         {
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size
@@ -97,6 +103,7 @@ public sealed class SystemConfiguration : IDisposable
 
     private JsonElement LoadFile()
     {
+        EnsureSchema();
         using var stream = File.Open(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var document = JsonDocument.Parse(stream);
         if (document.RootElement.ValueKind != JsonValueKind.Object)
@@ -105,6 +112,61 @@ public sealed class SystemConfiguration : IDisposable
         }
 
         return document.RootElement.Clone();
+    }
+
+    private void EnsureSchema()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, SchemaFileName);
+        var destination = Path.Combine(Path.GetDirectoryName(FilePath)!, SchemaFileName);
+        var sourceVersion = ReadSchemaVersion(source);
+        if (sourceVersion == 0)
+        {
+            throw new InvalidDataException("程序附带的 JSON 架构必须包含正整数 x-schema-version。");
+        }
+
+        if (!File.Exists(destination) || ReadSchemaVersion(destination) < sourceVersion)
+        {
+            File.Copy(source, destination, overwrite: true);
+        }
+    }
+
+    private static int ReadSchemaVersion(string path)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException($"JSON 架构根节点必须是对象：{path}");
+        }
+
+        if (!document.RootElement.TryGetProperty("x-schema-version", out var version))
+        {
+            return 0;
+        }
+
+        if (version.ValueKind != JsonValueKind.Number
+            || !version.TryGetInt32(out var value)
+            || value < 0)
+        {
+            throw new InvalidDataException($"JSON 架构 x-schema-version 必须是非负整数：{path}");
+        }
+
+        return value;
+    }
+
+    private void EnsureSchemaReference()
+    {
+        if (_root.TryGetProperty("$schema", out var reference)
+            && reference.ValueKind == JsonValueKind.String
+            && reference.GetString() == SchemaFileName)
+        {
+            return;
+        }
+
+        var configuration = JsonNode.Parse(_root.GetRawText())!.AsObject();
+        configuration.Remove("$schema");
+        configuration.Insert(0, "$schema", SchemaFileName);
+        File.WriteAllText(FilePath, configuration.ToJsonString(SerializerOptions));
+        _root = JsonSerializer.SerializeToElement(configuration, SerializerOptions);
     }
 
     private void Apply(JsonElement root)

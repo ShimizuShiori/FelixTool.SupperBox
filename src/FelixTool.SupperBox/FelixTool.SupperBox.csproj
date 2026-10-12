@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FelixTool.SupperBox.Abstractions\FelixTool.SupperBox.Abstractions.csproj" />
+    <None Update="config.schema.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>
