@@ -40,7 +40,8 @@ public sealed class NewWiBranchCommandTests : IDisposable
     public async Task RegistryExecuteAsync_UsesAllRemainingTextAndCreatesBranchInRepository()
     {
         var git = new RecordingGitRepositoryService();
-        var command = new NewWiBranchCommand(_repositoryRoot, git);
+        var command = new NewWiBranchCommand(
+            new RepositoryCatalog(_repositoryRoot), git, new RecordingRepositorySelection());
         var registry = new CommandRegistry([command]);
 
         var result = await registry.ExecuteAsync(
@@ -57,11 +58,51 @@ public sealed class NewWiBranchCommandTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RejectsMissingWorkItemTitle()
     {
-        var command = new NewWiBranchCommand(_repositoryRoot, new RecordingGitRepositoryService());
+        var command = new NewWiBranchCommand(
+            new RepositoryCatalog(_repositoryRoot),
+            new RecordingGitRepositoryService(),
+            new RecordingRepositorySelection());
         var registry = new CommandRegistry([command]);
 
         await Assert.ThrowsAsync<CommandInputException>(() =>
             registry.ExecuteAsync("newwibranch Glow", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SelectsDuplicateRepositoryBeforeCreatingBranch()
+    {
+        var secondRoot = Path.Combine(_repositoryRoot, "OtherRoot");
+        var secondRepository = Directory.CreateDirectory(Path.Combine(secondRoot, "Glow")).FullName;
+        var git = new RecordingGitRepositoryService();
+        var selection = new RecordingRepositorySelection { SelectedIndex = 1 };
+        var command = new NewWiBranchCommand(
+            new RepositoryCatalog(_repositoryRoot, secondRoot), git, selection);
+        var registry = new CommandRegistry([command]);
+
+        await registry.ExecuteAsync("newwibranch Glow WI01095616 title", CancellationToken.None);
+
+        Assert.Equal(secondRepository, git.RepositoryPath);
+        Assert.Equal(1, selection.CallCount);
+        Assert.All(selection.Items, item => Assert.Equal(item.Value, item.Description));
+        Assert.Single(command.GetSuggestions(0, "glow"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CancelingSelectionDoesNotCreateBranch()
+    {
+        var secondRoot = Path.Combine(_repositoryRoot, "OtherRoot");
+        Directory.CreateDirectory(Path.Combine(secondRoot, "Glow"));
+        var git = new RecordingGitRepositoryService();
+        var command = new NewWiBranchCommand(
+            new RepositoryCatalog(_repositoryRoot, secondRoot),
+            git,
+            new RecordingRepositorySelection { Cancel = true });
+        var registry = new CommandRegistry([command]);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            registry.ExecuteAsync("newwibranch Glow WI01095616 title", CancellationToken.None));
+
+        Assert.Null(git.RepositoryPath);
     }
 
     [Theory]

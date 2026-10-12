@@ -26,6 +26,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 websearch google "SupperBox launcher"
 quicktext translate Chinese "Hello world"
 openpage baidu
+run foo
 openrepo code MyRepository
 openrepo cmd MyRepository
 openrepo copilot MyRepository
@@ -43,6 +44,15 @@ sysconfig
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
 
+配置文件通过 `$schema` 的 `.\config.schema.json` 相对路径引用同目录的架构文件，支持编辑器校验、字段说明和
+自动补全。架构源文件位于 `src\FelixTool.SupperBox\config.schema.json`，纳入代码托管并
+随程序发布。每次加载配置（包括热重载）时，如果用户目录中的架构文件不存在，或其
+`x-schema-version` 小于随程序发布的版本，就自动复制更新；没有版本字段的架构按旧版
+处理，同版本或更高版本不会覆盖。修改架构时应递增这个正整数版本。
+程序启动时会为新旧配置自动添加或更新 `$schema` 引用，保留其他配置内容。
+自动写入配置时保留可读的汉字和符号，只对 JSON 必需的引号、反斜杠和控制字符转义。
+架构允许额外根属性，兼容外部插件配置；架构或复制错误会通过现有错误机制报告。
+
 `quicktext <type> <arg0> <arg1> ...` 从配置文件的 `quicktexts` section 读取快捷文本，
 并按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
 显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
@@ -52,10 +62,23 @@ Tab 补全。
 `openpage <pageName>` 使用系统默认浏览器打开配置文件 `pages` section 中对应的
 HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称，并按 Tab 补全。
 
+`run <target>` 从配置文件 `commands` section 读取对应目标的 `command`，
+在新 CMD 窗口中执行，执行结束后保留窗口以查看输出。命令按 CMD 语法解释，支持
+`npm run ...`、`dotnet test ...`、引号、管道以及 `&&` 等，不会额外拆分参数。
+可选的 `workingDir` 必须是绝对目录路径，省略时使用当前用户目录
+（如 `C:\Users\CurrentUser`）。目标或工作目录不存在时会报错。
+目标名称不区分大小写，支持 Tab 补全和配置热重载。仅配置可信命令，命令会以当前
+用户权限执行。旧配置无需添加 `commands` 节即可启动，新配置默认包含空对象。
+
 `openrepo <runner> <repoName>` 使用指定程序打开
-`C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。`runner` 可选 `code`（VS Code）、
+配置文件 `repositories.roots` 中各个仓库根目录下的同名一级目录。`runner` 可选 `code`（VS Code）、
 `cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
 管理器）。runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执行任何操作。
+`openrepo` 和 `newwibranch` 共用此配置，保存后自动刷新。不同根目录下存在同名仓库时，
+会显示选择窗口，列出完整路径；取消选择不会打开仓库或创建分支。补全列表中的同名仓库
+只显示一次。目录无需包含 `.git`，不会递归搜索；不存在的根目录会跳过。
+`roots` 必须是绝对路径数组，空数组表示不搜索任何仓库。旧配置没有 `repositories`
+节时仍使用 `C:\git\GitHub\WiseTechGlobal`，新配置默认包含该路径。
 
 `opensln <filepath>` 从指定文件或目录开始，逐级向上查找当前目录中的 `.sln` 和
 `.slnx` 文件。只找到一个时直接打开；找到多个时显示通用选择窗口。程序通过 Visual
@@ -69,6 +92,22 @@ section 名。实现
 
 ```json
 {
+  "$schema": ".\\config.schema.json",
+  "commands": {
+    "foo": {
+      "workingDir": "C:\\FelixProjects\\MyApp",
+      "command": "npm run dev"
+    },
+    "hello": {
+      "command": "echo Hello"
+    }
+  },
+  "repositories": {
+    "roots": [
+      "C:\\git\\GitHub\\WiseTechGlobal",
+      "C:\\FelixProjects"
+    ]
+  },
   "websearch": {
     "engine": {
       "foo": "https://www.foo.com?q={0}&type={1}&dd={2}"

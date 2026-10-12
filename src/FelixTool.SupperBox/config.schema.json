@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-schema-version": 3,
+  "title": "FelixTool.SupperBox configuration",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Local configuration schema reference.",
+      "default": ".\\config.schema.json"
+    },
+    "commands": {
+      "type": "object",
+      "description": "Named commands launched by run in a CMD window that remains open after execution.",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "A command interpreted by CMD, including quoted arguments, pipes and command chaining."
+          },
+          "workingDir": {
+            "$ref": "#/$defs/absoluteDirectory",
+            "description": "Working directory. When omitted, defaults to the current user's profile directory."
+          }
+        }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "description": "Repository search roots shared by openrepo and newwibranch.",
+      "required": ["roots"],
+      "properties": {
+        "roots": {
+          "type": "array",
+          "description": "Searches immediate subdirectories of each root. An empty array disables repository search.",
+          "items": { "$ref": "#/$defs/absoluteDirectory" },
+          "default": ["C:\\git\\GitHub\\WiseTechGlobal"]
+        }
+      }
+    },
+    "websearch": {
+      "type": "object",
+      "required": ["engine"],
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/textMap",
+          "description": "Search engine names and HTTP/HTTPS URL templates with {0}, {1}, ... placeholders."
+        }
+      }
+    },
+    "quicktexts": {
+      "$ref": "#/$defs/textMap",
+      "description": "Quick text names and templates with {0}, {1}, ... placeholders."
+    },
+    "pages": {
+      "type": "object",
+      "description": "Page names and HTTP/HTTPS addresses used by openpage.",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "absoluteDirectory": {
+      "type": "string",
+      "description": "An absolute Windows directory path.",
+      "pattern": "^(?:[A-Za-z]:[\\\\/]|\\\\\\\\[^\\\\]+\\\\[^\\\\]+)"
+    },
+    "textMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    }
+  }
+}

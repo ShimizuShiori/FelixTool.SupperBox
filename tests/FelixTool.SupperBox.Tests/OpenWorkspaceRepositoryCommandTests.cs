@@ -24,8 +24,9 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
     public void GetSuggestions_ReturnsRunnersAndMatchingRepositoryNames()
     {
         var command = new OpenWorkspaceRepositoryCommand(
-            _repositoryRoot,
-            new RecordingRepositoryLauncher());
+            new RepositoryCatalog(_repositoryRoot),
+            new RecordingRepositoryLauncher(),
+            new RecordingRepositorySelection());
 
         Assert.Equal("openrepo", command.Name);
         Assert.Equal(
@@ -47,7 +48,8 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
         RepositoryRunner expectedRunner)
     {
         var launcher = new RecordingRepositoryLauncher();
-        var command = new OpenWorkspaceRepositoryCommand(_repositoryRoot, launcher);
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot), launcher, new RecordingRepositorySelection());
 
         var result = await command.ExecuteAsync(
             new Dictionary<string, object?>
@@ -66,8 +68,9 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
     public async Task ExecuteAsync_RejectsUnknownRunner()
     {
         var command = new OpenWorkspaceRepositoryCommand(
-            _repositoryRoot,
-            new RecordingRepositoryLauncher());
+            new RepositoryCatalog(_repositoryRoot),
+            new RecordingRepositoryLauncher(),
+            new RecordingRepositorySelection());
 
         var exception = await Assert.ThrowsAsync<CommandInputException>(() => command.ExecuteAsync(
             new Dictionary<string, object?>
@@ -106,7 +109,8 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
     public async Task ExecuteAsync_DoesNothingForUnknownRepository(string repositoryName)
     {
         var launcher = new RecordingRepositoryLauncher();
-        var command = new OpenWorkspaceRepositoryCommand(_repositoryRoot, launcher);
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot), launcher, new RecordingRepositorySelection());
 
         var result = await command.ExecuteAsync(
             new Dictionary<string, object?>
@@ -117,6 +121,47 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
             CancellationToken.None);
 
         Assert.True(result.Success);
+        Assert.Null(launcher.OpenedPath);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SelectsDuplicateRepositoryAndDeduplicatesSuggestions()
+    {
+        var secondRoot = Path.Combine(_repositoryRoot, "OtherRoot");
+        var secondRepository = Directory.CreateDirectory(Path.Combine(secondRoot, "Alpha")).FullName;
+        var selection = new RecordingRepositorySelection { SelectedIndex = 1 };
+        var launcher = new RecordingRepositoryLauncher();
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot, secondRoot), launcher, selection);
+
+        await command.ExecuteAsync(
+            new Dictionary<string, object?> { ["runner"] = "code", ["repoName"] = "alpha" },
+            CancellationToken.None);
+
+        Assert.Equal(secondRepository, launcher.OpenedPath);
+        Assert.Equal(1, selection.CallCount);
+        Assert.Equal(
+            [Path.Combine(_repositoryRoot, "Alpha"), secondRepository],
+            selection.Items.Select(item => item.Value));
+        Assert.All(selection.Items, item => Assert.Equal(item.Value, item.Description));
+        Assert.Single(command.GetSuggestions(1, "alpha"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CancelingSelectionDoesNotOpenRepository()
+    {
+        var secondRoot = Path.Combine(_repositoryRoot, "OtherRoot");
+        Directory.CreateDirectory(Path.Combine(secondRoot, "Alpha"));
+        var launcher = new RecordingRepositoryLauncher();
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot, secondRoot),
+            launcher,
+            new RecordingRepositorySelection { Cancel = true });
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => command.ExecuteAsync(
+            new Dictionary<string, object?> { ["runner"] = "code", ["repoName"] = "Alpha" },
+            CancellationToken.None));
+
         Assert.Null(launcher.OpenedPath);
     }
 

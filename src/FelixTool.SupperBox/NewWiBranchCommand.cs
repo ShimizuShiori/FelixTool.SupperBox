@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using FelixTool.SupperBox.Abstractions;
 
@@ -98,20 +99,25 @@ public sealed class GitRepositoryService : IGitRepositoryService
 }
 
 public sealed partial class NewWiBranchCommand(
-    string repositoryRoot,
-    IGitRepositoryService git) : IVariadicCommandPlugin, ICommandValueSuggestionProvider
+    RepositoryCatalog repositories,
+    IGitRepositoryService git,
+    IItemSelectionService itemSelection) :
+    IVariadicCommandPlugin, ICommandValueSuggestionProvider, IOptionalConfigurableCommandPlugin
 {
     private const string BranchPrefix = "FLF/";
     private const int MaximumBranchNameLength = 100;
-    private readonly RepositoryCatalog _repositories = new(repositoryRoot);
-
     public string Name => "newwibranch";
 
     public string Description => "从仓库最新主分支创建 FLF 工作项分支";
 
+    public string ConfigurationSectionName => "repositories";
+
+    public void ApplyConfiguration(JsonElement configuration) =>
+        repositories.ApplyConfiguration(configuration);
+
     public IReadOnlyList<CommandParameter> Parameters { get; } =
     [
-        new("repoName", CommandParameterType.String, "公司代码仓库根目录下的仓库名称")
+        new("repoName", CommandParameterType.String, "已配置仓库根目录下的仓库名称")
     ];
 
     public CommandParameter RemainingParameter { get; } =
@@ -122,7 +128,7 @@ public sealed partial class NewWiBranchCommand(
         CancellationToken cancellationToken)
     {
         var repositoryName = (string)arguments["repoName"]!;
-        var repository = _repositories.Find(repositoryName);
+        var repository = await repositories.SelectAsync(repositoryName, itemSelection, cancellationToken);
         if (repository is null)
         {
             throw new CommandInputException($"找不到仓库“{repositoryName}”。");
@@ -144,9 +150,10 @@ public sealed partial class NewWiBranchCommand(
             return [];
         }
 
-        return _repositories.GetAll()
+        return repositories.GetAll()
             .Select(Path.GetFileName)
             .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(name => name)
