@@ -9,6 +9,7 @@ namespace FelixTool.SupperBox;
 public sealed class SystemConfiguration : IDisposable
 {
     private const string SchemaFileName = "config.schema.json";
+    private const string SchemaReference = @".\config.schema.json";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -157,14 +158,14 @@ public sealed class SystemConfiguration : IDisposable
     {
         if (_root.TryGetProperty("$schema", out var reference)
             && reference.ValueKind == JsonValueKind.String
-            && reference.GetString() == SchemaFileName)
+            && reference.GetString() == SchemaReference)
         {
             return;
         }
 
         var configuration = JsonNode.Parse(_root.GetRawText())!.AsObject();
         configuration.Remove("$schema");
-        configuration.Insert(0, "$schema", SchemaFileName);
+        configuration.Insert(0, "$schema", SchemaReference);
         File.WriteAllText(FilePath, configuration.ToJsonString(SerializerOptions));
         _root = JsonSerializer.SerializeToElement(configuration, SerializerOptions);
     }

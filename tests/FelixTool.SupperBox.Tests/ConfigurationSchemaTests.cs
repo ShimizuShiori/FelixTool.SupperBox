@@ -24,12 +24,16 @@ public sealed class ConfigurationSchemaTests : IDisposable
         using var document = JsonDocument.Parse(File.ReadAllText(ConfigurationPath));
 
         Assert.Equal(File.ReadAllText(BundledSchemaPath), File.ReadAllText(SchemaPath));
-        Assert.Equal("config.schema.json", document.RootElement.GetProperty("$schema").GetString());
+        Assert.Equal(@".\config.schema.json", document.RootElement.GetProperty("$schema").GetString());
+        using var schema = JsonDocument.Parse(File.ReadAllText(SchemaPath));
+        Assert.Equal(@".\config.schema.json",
+            schema.RootElement.GetProperty("properties").GetProperty("$schema").GetProperty("default").GetString());
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("old.schema.json")]
+    [InlineData("config.schema.json")]
     public void ExistingConfiguration_AddsSchemaReferenceWithoutLosingUserSettings(string? reference)
     {
         File.WriteAllText(ConfigurationPath, JsonSerializer.Serialize(new Dictionary<string, object?>
@@ -43,7 +47,7 @@ public sealed class ConfigurationSchemaTests : IDisposable
         using var document = JsonDocument.Parse(File.ReadAllText(ConfigurationPath));
         var root = document.RootElement;
 
-        Assert.Equal("config.schema.json", root.GetProperty("$schema").GetString());
+        Assert.Equal(@".\config.schema.json", root.GetProperty("$schema").GetString());
         Assert.Equal([@"C:\repos", @"D:\repos"],
             root.GetProperty("repositories").GetProperty("roots")
                 .EnumerateArray().Select(value => value.GetString()));
@@ -55,6 +59,7 @@ public sealed class ConfigurationSchemaTests : IDisposable
     [InlineData("""{}""")]
     [InlineData("""{"x-schema-version":0}""")]
     [InlineData("""{"x-schema-version":1}""")]
+    [InlineData("""{"x-schema-version":2}""")]
     public void ExistingSchema_ReplacesUnversionedOrOlderSchema(string schema)
     {
         File.WriteAllText(SchemaPath, schema);
@@ -95,7 +100,7 @@ public sealed class ConfigurationSchemaTests : IDisposable
             ["x-schema-version"] = version + versionIncrement,
             ["title"] = "Do not overwrite this schema."
         });
-        const string json = """{"$schema":"config.schema.json","customPlugin":{"value":"unchanged"}}""";
+        const string json = """{"$schema":".\\config.schema.json","customPlugin":{"value":"unchanged"}}""";
         File.WriteAllText(SchemaPath, schema);
         File.WriteAllText(ConfigurationPath, json);
 
@@ -135,7 +140,7 @@ public sealed class ConfigurationSchemaTests : IDisposable
         var reloaded = new TaskCompletionSource<ConfigurationReloadedEventArgs>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         configuration.Reloaded += (_, args) => reloaded.TrySetResult(args);
-        File.WriteAllText(ConfigurationPath, """{"$schema":"config.schema.json","customPlugin":{}}""");
+        File.WriteAllText(ConfigurationPath, """{"$schema":".\\config.schema.json","customPlugin":{}}""");
 
         var result = await reloaded.Task.WaitAsync(TimeSpan.FromSeconds(10));
 

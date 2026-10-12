@@ -44,7 +44,7 @@ sysconfig
 保存配置后程序会自动重新加载；输入 `websearch ` 时可用方向键选择 engine，并按
 Tab 补全。
 
-配置文件通过 `$schema` 引用同目录的 `config.schema.json`，支持编辑器校验、字段说明和
+配置文件通过 `$schema` 的 `.\config.schema.json` 相对路径引用同目录的架构文件，支持编辑器校验、字段说明和
 自动补全。架构源文件位于 `src\FelixTool.SupperBox\config.schema.json`，纳入代码托管并
 随程序发布。每次加载配置（包括热重载）时，如果用户目录中的架构文件不存在，或其
 `x-schema-version` 小于随程序发布的版本，就自动复制更新；没有版本字段的架构按旧版
@@ -92,7 +92,7 @@ section 名。实现
 
 ```json
 {
-  "$schema": "config.schema.json",
+  "$schema": ".\\config.schema.json",
   "commands": {
     "foo": {
       "workingDir": "C:\\FelixProjects\\MyApp",

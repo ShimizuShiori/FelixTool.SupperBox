@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-schema-version": 2,
+  "x-schema-version": 3,
   "title": "FelixTool.SupperBox configuration",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
       "description": "Local configuration schema reference.",
-      "default": "config.schema.json"
+      "default": ".\\config.schema.json"
     },
     "commands": {
       "type": "object",
