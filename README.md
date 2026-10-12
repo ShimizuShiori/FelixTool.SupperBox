@@ -26,6 +26,7 @@ dotnet run --project .\src\FelixTool.SupperBox
 websearch google "SupperBox launcher"
 quicktext translate Chinese "Hello world"
 openpage baidu
+run foo
 openrepo code MyRepository
 openrepo cmd MyRepository
 openrepo copilot MyRepository
@@ -61,6 +62,14 @@ Tab 补全。
 `openpage <pageName>` 使用系统默认浏览器打开配置文件 `pages` section 中对应的
 HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称，并按 Tab 补全。
 
+`run <target>` 从配置文件 `commands` section 读取对应目标的 `command`，
+在新 CMD 窗口中执行，执行结束后保留窗口以查看输出。命令按 CMD 语法解释，支持
+`npm run ...`、`dotnet test ...`、引号、管道以及 `&&` 等，不会额外拆分参数。
+可选的 `workingDir` 必须是绝对目录路径，省略时使用当前用户目录
+（如 `C:\Users\CurrentUser`）。目标或工作目录不存在时会报错。
+目标名称不区分大小写，支持 Tab 补全和配置热重载。仅配置可信命令，命令会以当前
+用户权限执行。旧配置无需添加 `commands` 节即可启动，新配置默认包含空对象。
+
 `openrepo <runner> <repoName>` 使用指定程序打开
 配置文件 `repositories.roots` 中各个仓库根目录下的同名一级目录。`runner` 可选 `code`（VS Code）、
 `cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
@@ -84,6 +93,15 @@ section 名。实现
 ```json
 {
   "$schema": "config.schema.json",
+  "commands": {
+    "foo": {
+      "workingDir": "C:\\FelixProjects\\MyApp",
+      "command": "npm run dev"
+    },
+    "hello": {
+      "command": "echo Hello"
+    }
+  },
   "repositories": {
     "roots": [
       "C:\\git\\GitHub\\WiseTechGlobal",

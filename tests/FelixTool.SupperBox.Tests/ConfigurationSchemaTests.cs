@@ -54,6 +54,7 @@ public sealed class ConfigurationSchemaTests : IDisposable
     [Theory]
     [InlineData("""{}""")]
     [InlineData("""{"x-schema-version":0}""")]
+    [InlineData("""{"x-schema-version":1}""")]
     public void ExistingSchema_ReplacesUnversionedOrOlderSchema(string schema)
     {
         File.WriteAllText(SchemaPath, schema);

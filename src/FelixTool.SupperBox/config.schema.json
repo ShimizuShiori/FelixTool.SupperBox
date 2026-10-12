@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-schema-version": 1,
+  "x-schema-version": 2,
   "title": "FelixTool.SupperBox configuration",
   "type": "object",
   "properties": {
@@ -8,6 +8,28 @@
       "type": "string",
       "description": "Local configuration schema reference.",
       "default": "config.schema.json"
+    },
+    "commands": {
+      "type": "object",
+      "description": "Named commands launched by run in a CMD window that remains open after execution.",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "A command interpreted by CMD, including quoted arguments, pipes and command chaining."
+          },
+          "workingDir": {
+            "$ref": "#/$defs/absoluteDirectory",
+            "description": "Working directory. When omitted, defaults to the current user's profile directory."
+          }
+        }
+      }
     },
     "repositories": {
       "type": "object",
@@ -17,11 +39,7 @@
         "roots": {
           "type": "array",
           "description": "Searches immediate subdirectories of each root. An empty array disables repository search.",
-          "items": {
-            "type": "string",
-            "description": "An absolute Windows directory path.",
-            "pattern": "^(?:[A-Za-z]:[\\\\/]|\\\\\\\\[^\\\\]+\\\\[^\\\\]+)"
-          },
+          "items": { "$ref": "#/$defs/absoluteDirectory" },
           "default": ["C:\\git\\GitHub\\WiseTechGlobal"]
         }
       }
@@ -55,6 +73,11 @@
   },
   "additionalProperties": true,
   "$defs": {
+    "absoluteDirectory": {
+      "type": "string",
+      "description": "An absolute Windows directory path.",
+      "pattern": "^(?:[A-Za-z]:[\\\\/]|\\\\\\\\[^\\\\]+\\\\[^\\\\]+)"
+    },
     "textMap": {
       "type": "object",
       "propertyNames": {

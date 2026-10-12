@@ -30,6 +30,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             new WebSearchCommand(launcher),
             new QuickTextCommand(output),
             new OpenPageCommand(launcher),
+            new RunCommand(new RunCommandLauncher()),
             new SystemConfigCommand(_configuration, launcher),
             new OpenWorkspaceRepositoryCommand(
                 repositories,

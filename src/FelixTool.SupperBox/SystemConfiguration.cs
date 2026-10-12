@@ -195,6 +195,7 @@ public sealed class SystemConfiguration : IDisposable
 
     private static object CreateDefault() => new
     {
+        commands = new Dictionary<string, object>(),
         repositories = new
         {
             roots = new[] { RepositoryCatalog.DefaultRoot }
