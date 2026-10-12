@@ -133,6 +133,10 @@ public sealed class SystemConfiguration : IDisposable
 
     private static object CreateDefault() => new
     {
+        repositories = new
+        {
+            roots = new[] { RepositoryCatalog.DefaultRoot }
+        },
         websearch = new
         {
             engine = new Dictionary<string, string>

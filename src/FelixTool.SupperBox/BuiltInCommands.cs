@@ -63,22 +63,25 @@ public sealed class RepositoryLauncher : IRepositoryLauncher
 }
 
 public sealed class OpenWorkspaceRepositoryCommand(
-    string repositoryRoot,
-    IRepositoryLauncher launcher) : ICommandPlugin, ICommandValueSuggestionProvider
+    RepositoryCatalog repositories,
+    IRepositoryLauncher launcher,
+    IItemSelectionService itemSelection) : IOptionalConfigurableCommandPlugin, ICommandValueSuggestionProvider
 {
-    private readonly RepositoryCatalog _repositories = new(repositoryRoot);
-
     public string Name => "openrepo";
 
-    public string Description => "使用指定程序打开 WiseTechGlobal 仓库";
+    public string Description => "使用指定程序打开已配置目录下的仓库";
+
+    public string ConfigurationSectionName => "repositories";
+
+    public void ApplyConfiguration(JsonElement configuration) => repositories.ApplyConfiguration(configuration);
 
     public IReadOnlyList<CommandParameter> Parameters { get; } =
     [
         new("runner", CommandParameterType.String, "打开方式：code、cmd、copilot 或 exp"),
-        new("repoName", CommandParameterType.String, "公司代码仓库根目录下的仓库名称")
+        new("repoName", CommandParameterType.String, "已配置仓库根目录下的仓库名称")
     ];
 
-    public Task<CommandResult> ExecuteAsync(
+    public async Task<CommandResult> ExecuteAsync(
         IReadOnlyDictionary<string, object?> arguments,
         CancellationToken cancellationToken)
     {
@@ -92,13 +95,14 @@ public sealed class OpenWorkspaceRepositoryCommand(
             _ => throw new CommandInputException(
                 $"不支持 runner“{runnerName}”，可选值为 code、cmd、copilot、exp。")
         };
-        var repository = _repositories.Find((string)arguments["repoName"]!);
+        var repository = await repositories.SelectAsync(
+            (string)arguments["repoName"]!, itemSelection, cancellationToken);
         if (repository is not null)
         {
             launcher.Open(runner, repository);
         }
 
-        return Task.FromResult(CommandResult.Ok(string.Empty));
+        return CommandResult.Ok(string.Empty);
     }
 
     public IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query)
@@ -122,9 +126,10 @@ public sealed class OpenWorkspaceRepositoryCommand(
             return [];
         }
 
-        return _repositories.GetAll()
+        return repositories.GetAll()
             .Select(Path.GetFileName)
             .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(name => name)
@@ -134,19 +139,63 @@ public sealed class OpenWorkspaceRepositoryCommand(
 
 }
 
-public sealed class RepositoryCatalog(string repositoryRoot)
+public sealed class RepositoryCatalog(params string[] repositoryRoots)
 {
-    public string? Find(string repositoryName)
+    public const string DefaultRoot = @"C:\git\GitHub\WiseTechGlobal";
+
+    private string[] _roots = repositoryRoots.Length == 0 ? [DefaultRoot] : repositoryRoots.ToArray();
+
+    public void ApplyConfiguration(JsonElement configuration)
     {
-        return GetAll().FirstOrDefault(path =>
-            Path.GetFileName(path).Equals(repositoryName, StringComparison.OrdinalIgnoreCase));
+        if (configuration.ValueKind != JsonValueKind.Object
+            || !configuration.TryGetProperty("roots", out var roots)
+            || roots.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("repositories 配置中缺少 roots 数组。");
+        }
+
+        var paths = new List<string>();
+        foreach (var root in roots.EnumerateArray())
+        {
+            if (root.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(root.GetString())
+                || !Path.IsPathFullyQualified(root.GetString()!))
+            {
+                throw new InvalidDataException("repositories.roots 中的每一项必须是非空绝对目录路径。");
+            }
+
+            paths.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root.GetString()!)));
+        }
+
+        Volatile.Write(ref _roots, paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+    }
+
+    public async Task<string?> SelectAsync(
+        string repositoryName,
+        IItemSelectionService itemSelection,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var matches = GetAll().Where(path =>
+            Path.GetFileName(path).Equals(repositoryName, StringComparison.OrdinalIgnoreCase)).ToList();
+        return matches.Count switch
+        {
+            0 => null,
+            1 => matches[0],
+            _ => await itemSelection.SelectAsync(
+                "选择仓库",
+                matches.Select(path => new SelectionItem<string>(
+                    path, Path.GetFileName(path), path)).ToList(),
+                cancellationToken)
+        };
     }
 
     public IEnumerable<string> GetAll()
     {
-        return Directory.Exists(repositoryRoot)
-            ? Directory.EnumerateDirectories(repositoryRoot)
-            : [];
+        return Volatile.Read(ref _roots)
+            .Where(Directory.Exists)
+            .SelectMany(root => Directory.EnumerateDirectories(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 }
 

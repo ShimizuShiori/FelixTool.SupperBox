@@ -53,9 +53,14 @@ Tab 补全。
 HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称，并按 Tab 补全。
 
 `openrepo <runner> <repoName>` 使用指定程序打开
-`C:\git\GitHub\WiseTechGlobal` 下的同名一级目录。`runner` 可选 `code`（VS Code）、
+配置文件 `repositories.roots` 中各个仓库根目录下的同名一级目录。`runner` 可选 `code`（VS Code）、
 `cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
 管理器）。runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执行任何操作。
+`openrepo` 和 `newwibranch` 共用此配置，保存后自动刷新。不同根目录下存在同名仓库时，
+会显示选择窗口，列出完整路径；取消选择不会打开仓库或创建分支。补全列表中的同名仓库
+只显示一次。目录无需包含 `.git`，不会递归搜索；不存在的根目录会跳过。
+`roots` 必须是绝对路径数组，空数组表示不搜索任何仓库。旧配置没有 `repositories`
+节时仍使用 `C:\git\GitHub\WiseTechGlobal`，新配置默认包含该路径。
 
 `opensln <filepath>` 从指定文件或目录开始，逐级向上查找当前目录中的 `.sln` 和
 `.slnx` 文件。只找到一个时直接打开；找到多个时显示通用选择窗口。程序通过 Visual
@@ -69,6 +74,12 @@ section 名。实现
 
 ```json
 {
+  "repositories": {
+    "roots": [
+      "C:\\git\\GitHub\\WiseTechGlobal",
+      "C:\\FelixProjects"
+    ]
+  },
   "websearch": {
     "engine": {
       "foo": "https://www.foo.com?q={0}&type={1}&dd={2}"

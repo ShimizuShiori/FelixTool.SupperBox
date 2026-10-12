@@ -24,7 +24,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         var pluginContext = new PluginContext(itemSelection, output);
         var loadResult = PluginLoader.Load(pluginDirectory, pluginContext);
         var launcher = new ExternalLauncher();
-        const string repositoryRoot = @"C:\git\GitHub\WiseTechGlobal";
+        var repositories = new RepositoryCatalog();
         var commands = loadResult.Plugins.Concat<ICommandPlugin>(
         [
             new WebSearchCommand(launcher),
@@ -32,9 +32,10 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             new OpenPageCommand(launcher),
             new SystemConfigCommand(_configuration, launcher),
             new OpenWorkspaceRepositoryCommand(
-                repositoryRoot,
-                new RepositoryLauncher()),
-            new NewWiBranchCommand(repositoryRoot, new GitRepositoryService()),
+                repositories,
+                new RepositoryLauncher(),
+                itemSelection),
+            new NewWiBranchCommand(repositories, new GitRepositoryService(), itemSelection),
             new OpenSolutionCommand(
                 itemSelection,
                 new VisualStudioLocator(),
