@@ -30,7 +30,7 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
 
         Assert.Equal("openrepo", command.Name);
         Assert.Equal(
-            ["code", "cmd", "copilot", "exp"],
+            ["code", "cmd", "copilot", "exp", "everything"],
             command.GetSuggestions(0, string.Empty).Select(item => item.Value));
 
         var suggestions = command.GetSuggestions(1, "a");
@@ -43,6 +43,8 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
     [InlineData("cmd", RepositoryRunner.CommandPrompt)]
     [InlineData("copilot", RepositoryRunner.Copilot)]
     [InlineData("exp", RepositoryRunner.Explorer)]
+    [InlineData("everything", RepositoryRunner.Everything)]
+    [InlineData("EVERYTHING", RepositoryRunner.Everything)]
     public async Task ExecuteAsync_OpensExistingRepositoryWithSelectedRunner(
         string runner,
         RepositoryRunner expectedRunner)
@@ -101,6 +103,36 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
         Assert.Equal(repositoryPath, startInfo.WorkingDirectory);
         Assert.Equal(passesRepositoryAsArgument ? [repositoryPath] : [], startInfo.ArgumentList);
         Assert.True(startInfo.UseShellExecute);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Repositories\Alpha")]
+    [InlineData(@"C:\My Repositories\Alpha Beta")]
+    [InlineData(@"C:\Repositories\Alpha\")]
+    [InlineData(@"\\server\share\Alpha Beta")]
+    public void RepositoryLauncher_EverythingSearchesWithinRepository(string repositoryPath)
+    {
+        var startInfo = RepositoryLauncher.CreateStartInfo(RepositoryRunner.Everything, repositoryPath);
+
+        Assert.Equal("Everything.exe", Path.GetFileName(startInfo.FileName));
+        Assert.Equal(repositoryPath, startInfo.WorkingDirectory);
+        Assert.Equal(
+            ["-new-window", "-no-regex", "-path", repositoryPath],
+            startInfo.ArgumentList);
+        Assert.True(startInfo.UseShellExecute);
+    }
+
+    [Fact]
+    public void GetSuggestions_FiltersEverythingRunnerCaseInsensitively()
+    {
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot),
+            new RecordingRepositoryLauncher(),
+            new RecordingRepositorySelection());
+
+        var suggestion = Assert.Single(command.GetSuggestions(0, "EVERY"));
+
+        Assert.Equal("everything", suggestion.Value);
     }
 
     [Theory]

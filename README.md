@@ -31,6 +31,7 @@ openrepo code MyRepository
 openrepo cmd MyRepository
 openrepo copilot MyRepository
 openrepo exp MyRepository
+openrepo everything MyRepository
 opensln C:\git\MyRepository\src
 sysconfig
 ```
@@ -72,8 +73,16 @@ HTTP 或 HTTPS 地址。输入 `openpage ` 时可用方向键选择页面名称�
 
 `openrepo <runner> <repoName>` 使用指定程序打开
 配置文件 `repositories.roots` 中各个仓库根目录下的同名一级目录。`runner` 可选 `code`（VS Code）、
-`cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）或 `exp`（文件资源
-管理器）。runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执行任何操作。
+`cmd`（命令提示符）、`copilot`（在仓库目录直接启动 Copilot）、`exp`（文件资源
+管理器）或 `everything`（在 Everything 中搜索仓库目录及其子目录）。
+`everything` 会打开独立搜索窗口，预置目录搜索条件，用户可继续在搜索框中追加文件名、
+扩展名等条件；本次搜索会关闭正则表达式模式，以正确解释目录路径。
+SupperBox 运行期间，新建的搜索窗口会在打开 5 分钟后自动关闭（继续输入不会重置计时），
+只关闭本次创建的窗口，不退出 Everything，也不影响其他搜索窗口。可以提前手动关闭；
+如果无法识别窗口或没有关闭权限，会显示错误提示。
+需要安装 Everything；优先查找 `Program Files` 和 `Program Files (x86)` 下的标准安装目录，
+其他安装方式需确保 `Everything.exe` 可通过 PATH 或 Windows 应用路径找到。
+runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执行任何操作。
 `openrepo` 和 `newwibranch` 共用此配置，保存后自动刷新。不同根目录下存在同名仓库时，
 会显示选择窗口，列出完整路径；取消选择不会打开仓库或创建分支。补全列表中的同名仓库
 只显示一次。目录无需包含 `.git`，不会递归搜索；不存在的根目录会跳过。
