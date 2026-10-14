@@ -30,7 +30,8 @@ public enum RepositoryRunner
     CommandPrompt,
     Copilot,
     Explorer,
-    Everything
+    Everything,
+    Remote
 }
 
 public sealed class RepositoryLauncher : IRepositoryLauncher
@@ -104,8 +105,12 @@ public sealed class RepositoryLauncher : IRepositoryLauncher
 public sealed class OpenWorkspaceRepositoryCommand(
     RepositoryCatalog repositories,
     IRepositoryLauncher launcher,
-    IItemSelectionService itemSelection) : IOptionalConfigurableCommandPlugin, ICommandValueSuggestionProvider
+    IItemSelectionService itemSelection,
+    IRepositoryRemoteLauncher? remoteLauncher = null) : IOptionalConfigurableCommandPlugin, ICommandValueSuggestionProvider
 {
+    private readonly IRepositoryRemoteLauncher _remoteLauncher =
+        remoteLauncher ?? new RepositoryRemoteLauncher(new ExternalLauncher());
+
     public string Name => "openrepo";
 
     public string Description => "使用指定程序打开已配置目录下的仓库";
@@ -116,7 +121,7 @@ public sealed class OpenWorkspaceRepositoryCommand(
 
     public IReadOnlyList<CommandParameter> Parameters { get; } =
     [
-        new("runner", CommandParameterType.String, "打开方式：code、cmd、copilot、exp 或 everything"),
+        new("runner", CommandParameterType.String, "打开方式：code、cmd、copilot、exp、everything 或 remote"),
         new("repoName", CommandParameterType.String, "已配置仓库根目录下的仓库名称")
     ];
 
@@ -132,14 +137,22 @@ public sealed class OpenWorkspaceRepositoryCommand(
             "copilot" => RepositoryRunner.Copilot,
             "exp" => RepositoryRunner.Explorer,
             "everything" => RepositoryRunner.Everything,
+            "remote" => RepositoryRunner.Remote,
             _ => throw new CommandInputException(
-                $"不支持 runner“{runnerName}”，可选值为 code、cmd、copilot、exp、everything。")
+                $"不支持 runner“{runnerName}”，可选值为 code、cmd、copilot、exp、everything、remote。")
         };
         var repository = await repositories.SelectAsync(
             (string)arguments["repoName"]!, itemSelection, cancellationToken);
         if (repository is not null)
         {
-            launcher.Open(runner, repository);
+            if (runner is RepositoryRunner.Remote)
+            {
+                await _remoteLauncher.OpenAsync(repository, itemSelection, cancellationToken);
+            }
+            else
+            {
+                launcher.Open(runner, repository);
+            }
         }
 
         return CommandResult.Ok(string.Empty);
@@ -155,7 +168,8 @@ public sealed class OpenWorkspaceRepositoryCommand(
                 ["cmd"] = "在仓库目录打开命令提示符",
                 ["copilot"] = "在仓库目录启动 Copilot",
                 ["exp"] = "在文件资源管理器中打开仓库",
-                ["everything"] = "在 Everything 中搜索仓库目录，可继续追加搜索条件"
+                ["everything"] = "在 Everything 中搜索仓库目录，可继续追加搜索条件",
+                ["remote"] = "使用默认浏览器打开仓库的远端地址"
             }
                 .Where(item => item.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
                 .Select(item => new CommandValueSuggestion(item.Key, item.Value))

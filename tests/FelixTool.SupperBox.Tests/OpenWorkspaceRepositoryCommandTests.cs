@@ -1,4 +1,5 @@
 using System.IO;
+using FelixTool.SupperBox.Abstractions;
 
 namespace FelixTool.SupperBox.Tests;
 
@@ -30,7 +31,7 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
 
         Assert.Equal("openrepo", command.Name);
         Assert.Equal(
-            ["code", "cmd", "copilot", "exp", "everything"],
+            ["code", "cmd", "copilot", "exp", "everything", "remote"],
             command.GetSuggestions(0, string.Empty).Select(item => item.Value));
 
         var suggestions = command.GetSuggestions(1, "a");
@@ -136,6 +137,27 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
     }
 
     [Theory]
+    [InlineData("remote")]
+    [InlineData("REMOTE")]
+    public async Task ExecuteAsync_RemoteOpensWebPageInsteadOfRepositoryProcess(string runner)
+    {
+        var launcher = new RecordingRepositoryLauncher();
+        var remoteLauncher = new RecordingRemoteLauncher();
+        var selection = new RecordingRepositorySelection();
+        var command = new OpenWorkspaceRepositoryCommand(
+            new RepositoryCatalog(_repositoryRoot), launcher, selection, remoteLauncher);
+        var registry = new CommandRegistry([command]);
+
+        var result = await registry.ExecuteAsync($"openrepo {runner} alpha", CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(Path.Combine(_repositoryRoot, "Alpha"), remoteLauncher.RepositoryPath);
+        Assert.Same(selection, remoteLauncher.ItemSelection);
+        Assert.Null(launcher.OpenedPath);
+        Assert.Equal("remote", Assert.Single(command.GetSuggestions(0, "REM")).Value);
+    }
+
+    [Theory]
     [InlineData("Missing")]
     [InlineData(@"..\Alpha")]
     public async Task ExecuteAsync_DoesNothingForUnknownRepository(string repositoryName)
@@ -207,6 +229,23 @@ public sealed class OpenWorkspaceRepositoryCommandTests : IDisposable
         {
             Runner = runner;
             OpenedPath = repositoryPath;
+        }
+
+    }
+
+    private sealed class RecordingRemoteLauncher : IRepositoryRemoteLauncher
+    {
+        public string? RepositoryPath { get; private set; }
+        public IItemSelectionService? ItemSelection { get; private set; }
+
+        public Task OpenAsync(
+            string repositoryPath,
+            IItemSelectionService itemSelection,
+            CancellationToken cancellationToken)
+        {
+            RepositoryPath = repositoryPath;
+            ItemSelection = itemSelection;
+            return Task.CompletedTask;
         }
     }
 }
