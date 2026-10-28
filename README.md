@@ -37,7 +37,9 @@ opensln C:\git\MyRepository\src
 sysconfig
 ```
 
-输入命令名时会显示匹配命令、参数类型和用途。参数可用单引号或双引号包裹；
+输入命令名时会显示匹配命令、参数类型和用途。在输入框中按 `↑` / `↓` 可选择提示，
+选中项会高亮并自动滚动到可见区域；按 `Tab` 补全，按 `Enter` 执行输入框中的命令。
+参数可用单引号或双引号包裹；
 反斜杠路径（如 `C:\Temp\a.txt`）会被原样保留。
 
 `sysconfig` 会打开 `%APPDATA%\FelixTool.SupperBox\config.json`。其中
@@ -56,7 +58,8 @@ Tab 补全。
 架构允许额外根属性，兼容外部插件配置；架构或复制错误会通过现有错误机制报告。
 
 `quicktext <type> <arg0> <arg1> ...` 从配置文件的 `quicktexts` section 读取快捷文本，
-并按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
+值支持字符串或字符串数组；数组每项代表一行，以换行符拼接，空字符串可用于分段。
+文本按序替换 `{0}`、`{1}` 等占位符。未提供对应参数的占位符会原样保留。生成结果会
 显示在可复用的 Output Box 中，并在显示时自动复制到剪贴板；也可手动复制、关闭，
 窗口在显示五分钟后会自动关闭。输入 `quicktext ` 时可用方向键选择 type，并按 Tab 补全。
 已有配置需要将根属性 `prompts` 重命名为 `quicktexts`，旧配置节不再读取。
@@ -132,7 +135,12 @@ section 名。实现
     }
   },
   "quicktexts": {
-    "translate": "Translate the following text into {0}: {1}"
+    "translate": "Translate the following text into {0}: {1}",
+    "review": [
+      "Review the following code:",
+      "",
+      "{0}"
+    ]
   },
   "pages": {
     "baidu": "https://www.baidu.com/"

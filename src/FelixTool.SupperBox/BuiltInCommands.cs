@@ -429,7 +429,19 @@ public sealed partial class QuickTextCommand(IOutputService output) :
         var quickTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in configuration.EnumerateObject())
         {
-            var format = property.Value.GetString();
+            var format = property.Value.ValueKind switch
+            {
+                JsonValueKind.String => property.Value.GetString(),
+                JsonValueKind.Array => string.Join(
+                    Environment.NewLine,
+                    property.Value.EnumerateArray().Select(line =>
+                        line.ValueKind == JsonValueKind.String
+                            ? line.GetString()
+                            : throw new InvalidDataException(
+                                $"快捷文本“{property.Name}”的数组元素必须是字符串。"))),
+                _ => throw new InvalidDataException(
+                    $"快捷文本“{property.Name}”必须是字符串或字符串数组。")
+            };
             if (string.IsNullOrWhiteSpace(property.Name) || string.IsNullOrWhiteSpace(format))
             {
                 throw new InvalidDataException("快捷文本类型和内容不能为空。");

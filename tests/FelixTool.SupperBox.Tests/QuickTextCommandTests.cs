@@ -36,6 +36,72 @@ public sealed class QuickTextCommandTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_JoinsArrayLinesAndPreservesFormatting()
+    {
+        var output = new RecordingOutputService();
+        var command = new QuickTextCommand(output);
+        using var document = JsonDocument.Parse(
+            """{"review":["Review {0}.", "", "  Additional context: {1}\nKeep this.\r\n", ""],"short":"Short {0}"}""");
+        command.ApplyConfiguration(document.RootElement);
+        var registry = new CommandRegistry([command]);
+
+        await registry.ExecuteAsync("quicktext review code", CancellationToken.None);
+
+        var expected = $"Review code.{Environment.NewLine}{Environment.NewLine}  Additional context: {{1}}\nKeep this.\r\n{Environment.NewLine}";
+        Assert.Equal(expected, output.Content);
+        await registry.ExecuteAsync("quicktext short code", CancellationToken.None);
+        Assert.Equal("Short code", output.Content);
+    }
+
+    [Theory]
+    [InlineData("""["Review {0}"]""", false)]
+    [InlineData("""["", "Review {0}", ""]""", true)]
+    public async Task ExecuteAsync_AcceptsSingleLineAndSurroundingBlankLines(string template, bool surroundingBlankLines)
+    {
+        var output = new RecordingOutputService();
+        var command = new QuickTextCommand(output);
+        using var document = JsonDocument.Parse($$"""{"review":{{template}}}""");
+
+        command.ApplyConfiguration(document.RootElement);
+        var registry = new CommandRegistry([command]);
+
+        await registry.ExecuteAsync("quicktext review code", CancellationToken.None);
+
+        var expected = surroundingBlankLines
+            ? $"{Environment.NewLine}Review code{Environment.NewLine}"
+            : "Review code";
+        Assert.Equal(expected, output.Content);
+        Assert.Equal(expected.Replace("code", "{0}"),
+            Assert.Single(command.GetSuggestions(0, "review")).Description);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("42")]
+    [InlineData("true")]
+    [InlineData("{}")]
+    [InlineData("[]")]
+    [InlineData("""["", " \t"]""")]
+    [InlineData("""["Valid", null]""")]
+    [InlineData("""["Valid", 42]""")]
+    [InlineData("""["Valid", false]""")]
+    [InlineData("""["Valid", {}]""")]
+    [InlineData("""["Valid", ["nested"]]""")]
+    public void ApplyConfiguration_RejectsInvalidTemplatesAndPreservesPreviousConfiguration(string template)
+    {
+        var command = new QuickTextCommand(new RecordingOutputService());
+        using var original = JsonDocument.Parse("""{"review":"Original"}""");
+        command.ApplyConfiguration(original.RootElement);
+        using var invalid = JsonDocument.Parse($$"""{"short":"New","review":{{template}}}""");
+
+        Assert.Throws<InvalidDataException>(() => command.ApplyConfiguration(invalid.RootElement));
+
+        var suggestion = Assert.Single(command.GetSuggestions(0, ""));
+        Assert.Equal("review", suggestion.Value);
+        Assert.Equal("Original", suggestion.Description);
+    }
+
+    [Fact]
     public void ApplyConfiguration_ProvidesTypeSuggestions()
     {
         var command = new QuickTextCommand(new RecordingOutputService());

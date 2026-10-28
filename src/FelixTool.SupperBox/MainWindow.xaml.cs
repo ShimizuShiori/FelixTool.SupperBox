@@ -13,10 +13,14 @@ public partial class MainWindow : System.Windows.Window, IDisposable
     private bool _allowClose;
     private bool _executing;
 
-    public MainWindow()
+    public MainWindow() : this(new SystemConfiguration())
+    {
+    }
+
+    internal MainWindow(SystemConfiguration configuration)
     {
         InitializeComponent();
-        _configuration = new SystemConfiguration();
+        _configuration = configuration;
         _configuration.Reloaded += Configuration_Reloaded;
         var pluginDirectory = Path.Combine(AppContext.BaseDirectory, "Plugins");
         var itemSelection = new ItemSelectionService(this);
@@ -80,7 +84,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         }
         else
         {
-            ShowStatus($"已加载 {_registry.Commands.Count} 个命令。按 Enter 执行，按 Esc 关闭。");
+            ShowStatus($"已加载 {_registry.Commands.Count} 个命令。↑/↓ 选择提示，Tab 补全，Enter 执行，Esc 关闭。");
         }
     }
 
@@ -103,7 +107,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         base.OnClosing(e);
     }
 
-    private async void CommandInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private async void CommandInput_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == Key.Enter && !_executing)
         {
@@ -233,6 +237,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
     {
         if (SuggestionList.SelectedItem is CommandSuggestion suggestion)
         {
+            SuggestionList.ScrollIntoView(suggestion);
             if (!suggestion.IsCommand
                 || !_registry.TryGet(suggestion.Completion, out var command)
                 || command is null)

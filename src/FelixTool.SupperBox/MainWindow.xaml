@@ -32,14 +32,14 @@
                      BorderBrush="#697386"
                      CaretBrush="White"
                      TextChanged="CommandInput_TextChanged"
-                     KeyDown="CommandInput_KeyDown"
+                     PreviewKeyDown="CommandInput_PreviewKeyDown"
                      AutomationProperties.Name="命令输入框" />
 
             <TextBlock x:Name="StatusText"
                        Margin="4,12,4,0"
                        Foreground="#AEB7C6"
                        FontSize="14"
-                       Text="输入命令，按 Enter 执行，按 Esc 关闭。" />
+                       Text="输入命令，↑/↓ 选择提示，Tab 补全，Enter 执行，Esc 关闭。" />
 
             <ListBox x:Name="SuggestionList"
                      Margin="0,12,0,0"
@@ -50,7 +50,21 @@
                      SelectionChanged="SuggestionList_SelectionChanged">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Padding="12,8" Margin="0,2" Background="#FF303642" CornerRadius="7">
+                        <Border Padding="12,8" Margin="0,2" CornerRadius="7"
+                                BorderThickness="1">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FF303642" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                     Value="True">
+                                            <Setter Property="Background" Value="#FF435775" />
+                                            <Setter Property="BorderBrush" Value="#FF8AB4F8" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel>
                                 <TextBlock FontFamily="Cascadia Mono, Consolas"
                                            FontSize="17"

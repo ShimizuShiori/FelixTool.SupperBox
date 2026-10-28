@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "x-schema-version": 3,
+  "x-schema-version": 4,
   "title": "FelixTool.SupperBox configuration",
   "type": "object",
   "properties": {
@@ -55,8 +55,25 @@
       }
     },
     "quicktexts": {
-      "$ref": "#/$defs/textMap",
-      "description": "Quick text names and templates with {0}, {1}, ... placeholders."
+      "type": "object",
+      "description": "Quick text names and templates with {0}, {1}, ... placeholders. String arrays are joined with line breaks.",
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "contains": { "type": "string", "pattern": "\\S" }
+          }
+        ]
+      }
     },
     "pages": {
       "type": "object",
