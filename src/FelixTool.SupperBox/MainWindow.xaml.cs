@@ -44,7 +44,8 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             new OpenSolutionCommand(
                 itemSelection,
                 new VisualStudioLocator(),
-                new VisualStudioSolutionLauncher())
+                new VisualStudioSolutionLauncher()),
+            new GuidCommand(output)
         ]).ToList();
         _configuration.Bind(commands);
         _registry = new CommandRegistry(commands);

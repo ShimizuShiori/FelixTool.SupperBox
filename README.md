@@ -106,6 +106,12 @@ runner 和仓库名称均支持 Tab 补全；仓库名称不存在时不会执�
 Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 Preview），
 也支持通过 `VSINSTALLDIR` 环境变量定位。
 
+`guid <strategy> [value]` 按策略生成 GUID，结果显示在 Output Box 并自动复制。
+输出统一为大写。内置策略：`random`（随机 GUID）、`seq <number>`（把十进制数字转为
+十六进制并右对齐写入，如 `guid seq 10` 得到 `00000000-0000-0000-0000-00000000000A`，
+超过 128 位会报错）、`repeat <hex>`（用单个十六进制字符 0-F 填满，如 `guid repeat 1`）。
+新增策略只需实现 `IGuidStrategy` 并加入 `GuidCommand` 的默认策略列表。
+
 配置文件的根属性名默认对应同名命令插件（不区分大小写），插件也可显式指定其他
 section 名。实现
 `IConfigurableCommandPlugin` 的插件会在启动和配置热重载时收到其专属 JSON 节点，
