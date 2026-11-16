@@ -45,7 +45,8 @@ public partial class MainWindow : System.Windows.Window, IDisposable
                 itemSelection,
                 new VisualStudioLocator(),
                 new VisualStudioSolutionLauncher()),
-            new GuidCommand(output)
+            new GuidCommand(output),
+            new FormatCommand(output)
         ]).ToList();
         _configuration.Bind(commands);
         _registry = new CommandRegistry(commands);
@@ -210,7 +211,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
 
         var parameterIndex = endsWithWhitespace ? tokens.Count - 1 : tokens.Count - 2;
         var queryValue = endsWithWhitespace ? string.Empty : tokens[^1];
-        return provider.GetSuggestions(parameterIndex, queryValue)
+        return provider.GetSuggestions(parameterIndex, queryValue, tokens.Skip(1).Take(parameterIndex).ToList())
             .Select(suggestion => new CommandSuggestion(
                 suggestion.Value,
                 suggestion.Value,

@@ -47,6 +47,11 @@ public sealed record CommandValueSuggestion(string Value, string Description);
 public interface ICommandValueSuggestionProvider
 {
     IReadOnlyList<CommandValueSuggestion> GetSuggestions(int parameterIndex, string query);
+
+    IReadOnlyList<CommandValueSuggestion> GetSuggestions(
+        int parameterIndex,
+        string query,
+        IReadOnlyList<string> precedingArguments) => GetSuggestions(parameterIndex, query);
 }
 
 public interface IConfigurableCommandPlugin : ICommandPlugin

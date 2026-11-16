@@ -34,6 +34,7 @@ openrepo exp MyRepository
 openrepo everything MyRepository
 openrepo remote MyRepository
 opensln C:\git\MyRepository\src
+format wi branch "WI01151449 - Web Billing - [SYS] Enable Billing Authentication"
 sysconfig
 ```
 
@@ -111,6 +112,21 @@ Studio Installer 附带的 `vswhere.exe` 查找最新的 Visual Studio（包含 
 十六进制并右对齐写入，如 `guid seq 10` 得到 `00000000-0000-0000-0000-00000000000A`，
 超过 128 位会报错）、`repeat <hex>`（用单个十六进制字符 0-F 填满，如 `guid repeat 1`）。
 新增策略只需实现 `IGuidStrategy` 并加入 `GuidCommand` 的默认策略列表。
+
+`format <sourcetype> <targettype> <content...>` 转换文本，结果显示在 Output Box 并自动
+复制到剪贴板。源类型和目标类型不区分大小写，均支持 Tab 补全，目标类型只提示当前
+源类型支持的转换。新增转换只需实现 `IFormatHandler`，声明 `SourceType`、`TargetType`
+和处理逻辑，再加入 `FormatCommand` 的默认处理器列表；同一源/目标组合不可重复。
+
+当前支持 `format wi branch`：输入 `WI编号 - 标题` 文本，或完整的 HTTP/HTTPS
+Markdown 链接（只读取链接文本，支持标题中的嵌套方括号，不访问链接）。
+保留工作项编号，以 `FLF/` 为前缀，并在编号和标题之间添加 `_`；标题只保留
+Unicode 字母和数字，移除空格和其他符号。整个分支名最多 100 个 UTF-8 字节，
+超长时只截断标题，保留完整编号且不切断 Unicode 字符；编号过长、标题不含
+字母或数字或输入格式无效时会报错。例如上述命令输出：
+`FLF/WI01151449_WebBillingSYSEnableBillingAuthentication`。
+含引号的内容应使用另一种引号包裹或转义。此命令仅生成文本，不创建 Git 分支，
+也不改变 `newwibranch` 的现有命名行为。
 
 配置文件的根属性名默认对应同名命令插件（不区分大小写），插件也可显式指定其他
 section 名。实现
